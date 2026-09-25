@@ -888,6 +888,7 @@ input[type='range']:disabled {
 .chat-msg img.chat-gif {
   display: block;
   max-width: min(230px, 100%);
+  max-height: min(230px, 100%);
   border-radius: 10px;
   border: 1px solid var(--line);
 }
