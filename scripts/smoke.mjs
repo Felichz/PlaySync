@@ -46,10 +46,18 @@ function check(name, cond, extra = '') {
   if (!cond) failures++;
 }
 
+const HTTP_BASE = process.env.SMOKE_HTTP ?? 'http://localhost:3001';
+
 const a = client('Ana');
 const b = client('Beto');
 
 try {
+  // Drive media resolver: an inaccessible id must answer with a JSON error.
+  const badInfo = await fetch(`${HTTP_BASE}/api/media/invalid12345/info`);
+  const badBody = await badInfo.json().catch(() => ({}));
+  check('drive info rejects invalid id', badInfo.status >= 400 && typeof badBody.error === 'string',
+    `status=${badInfo.status} error=${badBody.error}`);
+
   await a.open();
   a.send({ type: 'join', room: ROOM, name: 'Ana' });
   const wA = await a.wait((m) => m.type === 'welcome', 'welcome A');

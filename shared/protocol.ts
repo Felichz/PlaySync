@@ -1,7 +1,8 @@
 // Shared protocol between server and client.
 
 export type VideoItem = {
-  videoId: string;
+  videoId?: string; // YouTube source
+  media?: DriveMedia; // Drive source (mutually exclusive with videoId)
   title?: string;
   addedBy?: string;
 };
@@ -19,6 +20,13 @@ export type ChatMedia = {
   height?: number;
 };
 
+/** A file (e.g. Google Drive video) playing in the room instead of YouTube. */
+export type DriveMedia = {
+  fileId: string;
+  name?: string;
+  size?: number; // bytes
+};
+
 export type ChatMessage = {
   id: string;
   from: string; // participant id ('' for system messages)
@@ -32,8 +40,9 @@ export type ChatMessage = {
 /** Authoritative room state. `position` is the base at `lastUpdatedAt`. */
 export type RoomState = {
   room: string;
-  videoId: string | null;
+  videoId: string | null; // YouTube source
   videoTitle: string | null;
+  media: DriveMedia | null; // Drive source (takes precedence when set)
   isPlaying: boolean;
   position: number; // seconds
   lastUpdatedAt: number; // server clock, ms
@@ -59,11 +68,13 @@ export type ClientToServer =
   | { type: 'join'; room: string; name: string }
   | { type: 'rename'; name: string }
   | { type: 'load'; videoId: string; title?: string }
+  | { type: 'load-media'; media: DriveMedia }
   | { type: 'play' }
   | { type: 'pause' }
   | { type: 'seek'; position: number }
   | { type: 'ended' }
   | { type: 'queue-add'; videoId: string; title?: string }
+  | { type: 'queue-add-media'; media: DriveMedia }
   | { type: 'queue-remove'; index: number }
   | { type: 'queue-jump'; index: number }
   | { type: 'chat'; text: string; media?: ChatMedia }

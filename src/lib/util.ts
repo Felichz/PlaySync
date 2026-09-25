@@ -112,3 +112,19 @@ export function isEmojiOnly(text: string): boolean {
   if (!trimmed || trimmed.length > 16) return false;
   return /^[\p{Extended_Pictographic}\p{Emoji_Component}\s]+$/u.test(trimmed);
 }
+
+/** Extracts the file id from Google Drive share links or a bare id. */
+export function parseDriveFileId(input: string): string | null {
+  const s = input.trim();
+  if (!s) return null;
+  if (/^[-\w]{10,}$/.test(s) && !s.includes('.')) return s;
+  const m = s.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*)?id=)([-\w]{10,})/);
+  return m ? m[1] : null;
+}
+
+export function fmtBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '';
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}

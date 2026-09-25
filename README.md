@@ -53,6 +53,18 @@ Without the key, everything else works — the GIF/sticker tabs just show setup 
 Only `https://*.giphy.com` media URLs are accepted by the server, so the chat can't be used to
 embed arbitrary images.
 
+## Playing files from Google Drive
+
+Paste a public Drive link (`drive.google.com/file/d/…/view`) into the queue. The server
+resolves Drive's download interstitial and streams the bytes to every client with HTTP Range
+support, so seeking works. Nothing is stored server-side.
+
+- **Limit**: files above `MAX_MEDIA_MB` (default **500**) are rejected with a clear message.
+- **Bandwidth**: bytes flow Google → server → each viewer, so a 500 MB file watched by two
+  people costs ~1 GB of server egress. Keep it in mind on Render's free tier (5 GB/month).
+- The file must be shared as "Anyone with the link". Drive may throttle files with heavy
+  traffic (`DRIVE_QUOTA`) — try again the next day.
+
 ## Deploy
 
 Any host that runs Node and supports WebSockets works (it is a single process):
