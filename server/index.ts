@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import type {
+  ChatMedia,
   ChatMessage,
   ClientToServer,
   Participant,
@@ -16,6 +17,19 @@ import type {
 const PORT = Number(process.env.PORT ?? 3001);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
+
+// Load .env when present (dev convenience; on Render use dashboard env vars).
+try {
+  const envFile = fs.readFileSync(path.join(ROOT, '.env'), 'utf8');
+  for (const line of envFile.split('\n')) {
+    const m = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+    if (m && process.env[m[1]] === undefined) {
+      process.env[m[1]] = (m[2] ?? '').trim().replace(/^["']|["']$/g, '');
+    }
+  }
+} catch {
+  /* no .env file */
+}
 
 // ---------------------------------------------------------------- rooms
 
@@ -153,6 +167,26 @@ function cleanName(input: unknown): string {
   return n || 'Invitado';
 }
 
+// Only allow media hosted by the provider we front (blocks arbitrary image embedding).
+const MEDIA_HOST_RE = /(^|\.)giphy\.com$/;
+
+function normMedia(input: unknown): ChatMedia | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const raw = input as Record<string, unknown>;
+  if (raw.kind !== 'gif' && raw.kind !== 'sticker') return undefined;
+  if (typeof raw.url !== 'string' || raw.url.length > 600) return undefined;
+  let u: URL;
+  try {
+    u = new URL(raw.url);
+  } catch {
+    return undefined;
+  }
+  if (u.protocol !== 'https:' || !MEDIA_HOST_RE.test(u.hostname)) return undefined;
+  const dim = (v: unknown) =>
+    typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.round(Math.min(v, 2000)) : undefined;
+  return { kind: raw.kind, url: raw.url, width: dim(raw.width), height: dim(raw.height) };
+}
+
 // ----------------------------------------------------------------- logic
 
 function join(conn: Conn, roomCode: string, name: string): void {
@@ -216,7 +250,8 @@ function handle(conn: Conn, msg: ClientToServer): void {
       const r = conn.room;
       if (!r || typeof msg.text !== 'string') return;
       const text = msg.text.trim().slice(0, 500);
-      if (!text) return;
+      const media = normMedia(msg.media);
+      if (!text && !media) return;
       // Simple rate limit: max 6 messages per 3 s.
       const t = now();
       conn.chatTimes = conn.chatTimes.filter((x) => t - x < 3000);
@@ -225,7 +260,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
         return;
       }
       conn.chatTimes.push(t);
-      pushChat(r, { id: randomUUID(), from: conn.id, name: conn.name, text, at: t });
+      pushChat(r, { id: randomUUID(), from: conn.id, name: conn.name, text, media, at: t });
       return;
     }
   }
@@ -317,6 +352,11 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/giphy/search' || url.pathname === '/api/giphy/trending') {
+    void serveGiphy(url, res);
+    return;
+  }
+
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405).end();
     return;
@@ -399,6 +439,73 @@ setInterval(() => {
     }
   }
 }, 60_000);
+
+// ------------------------------------------------------------------ giphy
+
+type GiphyImage = { url?: string; width?: string; height?: string };
+type GiphyEntry = { id?: string; images?: Record<string, GiphyImage | undefined> };
+type GiphyItem = { id: string; preview: string; url: string; w?: number; h?: number };
+
+const giphyCache = new Map<string, { at: number; items: GiphyItem[] }>();
+
+function compactGiphy(g: GiphyEntry): GiphyItem | null {
+  const im = g.images ?? {};
+  const preview =
+    im.fixed_width?.url ?? im.fixed_height_downsampled?.url ?? im.fixed_height?.url ?? im.original?.url;
+  const full = im.downsized_medium?.url || im.downsized?.url || im.original?.url;
+  if (!preview || !full || !g.id) return null;
+  const w = parseInt(im.original?.width ?? '', 10);
+  const h = parseInt(im.original?.height ?? '', 10);
+  return { id: g.id, preview, url: full, w: w || undefined, h: h || undefined };
+}
+
+async function serveGiphy(url: URL, res: http.ServerResponse): Promise<void> {
+  const key = process.env.GIPHY_API_KEY;
+  if (!key) {
+    res.writeHead(503, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'GIPHY_API_KEY_MISSING' }));
+    return;
+  }
+
+  const kind = url.searchParams.get('type') === 'sticker' ? 'stickers' : 'gifs';
+  const q = (url.searchParams.get('q') ?? '').trim().slice(0, 60);
+  const endpoint = q ? 'search' : 'trending';
+  const cacheKey = `${kind}:${q}`;
+  const ttl = endpoint === 'trending' ? 30 * 60_000 : 10 * 60_000;
+
+  res.setHeader('content-type', 'application/json');
+  try {
+    const cached = giphyCache.get(cacheKey);
+    if (cached && now() - cached.at < ttl) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ items: cached.items }));
+      return;
+    }
+
+    const qs = new URLSearchParams({
+      api_key: key,
+      limit: '24',
+      rating: 'pg-13',
+      bundle: 'messaging_non_clips',
+    });
+    if (q) qs.set('q', q);
+    const r = await fetch(`https://api.giphy.com/v1/${kind}/${endpoint}?${qs}`);
+    if (!r.ok) {
+      res.writeHead(502);
+      res.end(JSON.stringify({ error: 'GIPHY_UPSTREAM_ERROR', status: r.status }));
+      return;
+    }
+    const j = (await r.json()) as { data?: GiphyEntry[] };
+    const items = (j.data ?? []).map(compactGiphy).filter((x): x is GiphyItem => x !== null);
+    giphyCache.set(cacheKey, { at: now(), items });
+    res.writeHead(200);
+    res.end(JSON.stringify({ items }));
+  } catch (err) {
+    console.error('giphy error', err);
+    res.writeHead(502);
+    res.end(JSON.stringify({ error: 'GIPHY_UNREACHABLE' }));
+  }
+}
 
 // ------------------------------------------------------------- static files
 

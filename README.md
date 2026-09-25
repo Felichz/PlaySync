@@ -5,7 +5,7 @@ A synchronized YouTube watch party, with no accounts, for every platform: it run
 ## Features
 
 - 🎬 **Real sync**: the server is the source of truth. Anyone's play, pause and seek propagate to everyone; each client estimates the server clock (NTP-lite over the WebSocket) and automatically corrects drift over 1.5 s. It resyncs when the tab regains focus or the connection drops.
-- 💬 **Real-time chat** with system messages (join/leave/now playing).
+- 💬 **Real-time chat** with system messages (join/leave/now playing), an emoji picker with per-user recents (WhatsApp-style), and GIFs/stickers via Giphy with search and your recently sent items.
 - 📋 **Video queue**: paste YouTube links (`watch`, `youtu.be`, `shorts`, `live`…); they play in order and the room auto-advances when a video ends.
 - 👥 **Code-based rooms** with a shareable link (`#/r/CODE`), no sign-up.
 - 📱 **Installable PWA** on Android, iPhone (Add to Home Screen) and desktop, with manifest, auto-updating service worker and generated icons.
@@ -39,6 +39,19 @@ Protocol smoke test (with the server running in another terminal):
 ```bash
 npm run smoke      # 10 checks: join, chat, play/pause/seek, queue, clock, etc.
 ```
+
+## Enabling GIFs and stickers (Giphy)
+
+The GIF/sticker picker is powered by [Giphy](https://developers.giphy.com). The key stays
+server-side; the client talks to `/api/giphy/*` on your own server (cached ~10 min per query).
+
+1. Create a free account at developers.giphy.com → **Create an App** → choose "API" → copy the key.
+2. **Local dev**: copy `.env.example` to `.env` and set `GIPHY_API_KEY=...`, then restart the server.
+3. **Render**: your service → **Environment** → add `GIPHY_API_KEY` → save (it redeploys).
+
+Without the key, everything else works — the GIF/sticker tabs just show setup instructions.
+Only `https://*.giphy.com` media URLs are accepted by the server, so the chat can't be used to
+embed arbitrary images.
 
 ## Deploy
 

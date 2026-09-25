@@ -1,4 +1,5 @@
 // Utilidades compartidas del cliente.
+import type { ChatMedia } from '../../shared/protocol';
 
 const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
@@ -76,4 +77,38 @@ export function setLS(key: string, value: string): void {
   } catch {
     /* private mode */
   }
+}
+
+// ------------------------------------------------- recently sent GIFs/stickers
+
+const RECENT_MEDIA_MAX = 30;
+
+export function getRecentMedia(kind: 'gif' | 'sticker'): ChatMedia[] {
+  try {
+    const raw = localStorage.getItem(`syncplay.recent.${kind}`);
+    const arr = raw ? (JSON.parse(raw) as unknown) : [];
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(
+      (x): x is ChatMedia =>
+        !!x && typeof x === 'object' && (x as ChatMedia).kind === kind && typeof (x as ChatMedia).url === 'string',
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function addRecentMedia(kind: 'gif' | 'sticker', media: ChatMedia): void {
+  try {
+    const next = [media, ...getRecentMedia(kind).filter((x) => x.url !== media.url)].slice(0, RECENT_MEDIA_MAX);
+    localStorage.setItem(`syncplay.recent.${kind}`, JSON.stringify(next));
+  } catch {
+    /* private mode */
+  }
+}
+
+/** True when a message is just a few emojis (rendered bigger, WhatsApp-style). */
+export function isEmojiOnly(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 16) return false;
+  return /^[\p{Extended_Pictographic}\p{Emoji_Component}\s]+$/u.test(trimmed);
 }
