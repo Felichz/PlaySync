@@ -23,11 +23,11 @@ export default function App() {
 
   return (
     <Landing
-      initialName={getLS('syncplay.name')}
-      lastRoom={getLS('syncplay.lastRoom')}
+      initialName={getLS('playsync.name')}
+      lastRoom={getLS('playsync.lastRoom')}
       onJoin={(code, name) => {
-        setLS('syncplay.name', name);
-        setLS('syncplay.lastRoom', code);
+        setLS('playsync.name', name);
+        setLS('playsync.lastRoom', code);
         window.location.hash = `#/r/${code}`;
       }}
     />

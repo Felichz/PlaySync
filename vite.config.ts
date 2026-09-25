@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'SyncPlay — Mira YouTube juntos',
-        short_name: 'SyncPlay',
+        name: 'PlaySync — Mira YouTube juntos',
+        short_name: 'PlaySync',
         description: 'Mira videos de YouTube sincronizados con quien quieras, desde cualquier dispositivo.',
         lang: 'es',
         start_url: '/',

@@ -32,7 +32,7 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
   const [dur, setDur] = useState(0);
   const [muted, setMuted] = useState(false);
   const [vol, setVol] = useState(() => {
-    const v = Number(getLS('syncplay.vol'));
+    const v = Number(getLS('playsync.vol'));
     return Number.isFinite(v) && v > 0 ? Math.min(v, 100) : 100;
   });
   const [scrub, setScrub] = useState<number | null>(null);
@@ -292,7 +292,7 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
   const changeVolume = (v: number) => {
     setVol(v);
     volRef.current = v;
-    setLS('syncplay.vol', String(v));
+    setLS('playsync.vol', String(v));
     const p = playerRef.current;
     if (!p) return;
     if (v === 0) p.mute();

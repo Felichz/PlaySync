@@ -2,7 +2,7 @@
 # Render picks this file up automatically when creating a "Web Service" from the repo.
 services:
   - type: web
-    name: syncplay
+    name: playsync
     runtime: node
     plan: free
     buildCommand: npm install && npm run build

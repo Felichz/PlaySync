@@ -13,7 +13,7 @@ together at night from different cities and devices (mix of phones and PCs). Spa
 
 ## Product Purpose
 
-SyncPlay is a synchronized YouTube watch party with no accounts: create a room, share a code,
+PlaySync is a synchronized YouTube watch party with no accounts: create a room, share a code,
 and everyone's play/pause/seek stays in sync while they chat. Success = a couple 8 timezones
 apart feels like they are on the same couch.
 
@@ -42,14 +42,14 @@ browser and installs as a PWA (including iOS Add to Home Screen).
 
 ## Brand Commitments
 
-- Name "SyncPlay" is binding.
+- Name "PlaySync" is binding.
 - User's stated bar for the redesign: "original pero pro, elegante moderno pero bonito, con
   detalles" — original, professional, elegant/modern, pretty, detail-rich. Not infantile,
   not corporate, not a Discord/Rave lookalike.
 
 ## Evidence on Hand
 
-- Live: https://syncplay-avtu.onrender.com · repo github.com/Felichz/SyncPlay
+- Live: https://playsync-avtu.onrender.com · repo github.com/Felichz/PlaySync
 - Full working feature set (rooms, sync, chat+media, queue, PWA) — redesign must keep all of it.
 
 ## Product Principles

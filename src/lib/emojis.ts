@@ -94,7 +94,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
 ];
 
-const RECENT_KEY = 'syncplay.recent.emoji';
+const RECENT_KEY = 'playsync.recent.emoji';
 const RECENT_MAX = 24;
 
 export function getRecentEmojis(): string[] {

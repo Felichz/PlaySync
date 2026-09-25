@@ -1,5 +1,5 @@
 ---
-name: SyncPlay — Al Aire
+name: PlaySync — Al Aire
 description: A midnight broadcast studio — ink-blue studio night, amber practicals, red only when ON AIR.
 colors:
   studio-night: "#080b11"
@@ -140,7 +140,7 @@ components:
     padding: "10px 18px"
 ---
 
-# Design System: SyncPlay — Al Aire
+# Design System: PlaySync — Al Aire
 
 ## Overview
 
