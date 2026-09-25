@@ -46,7 +46,7 @@ export default function QueuePanel({ queue, currentVideoId, onAdd, onRemove, onJ
           inputMode="url"
           aria-label="Enlace de YouTube"
         />
-        <button className="key primary" disabled={busy || !input.trim()}>
+        <button className="btn primary" disabled={busy || !input.trim()}>
           {busy ? '…' : <IconPlus size={16} />}
           {busy ? '' : 'Añadir'}
         </button>

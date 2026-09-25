@@ -132,7 +132,7 @@ export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
           maxLength={500}
           aria-label="Mensaje"
         />
-        <button className="key primary" disabled={!text.trim()} aria-label="Enviar">
+        <button className="btn primary" disabled={!text.trim()} aria-label="Enviar">
           <IconSend />
         </button>
       </form>

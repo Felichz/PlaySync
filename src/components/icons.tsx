@@ -158,24 +158,3 @@ export const IconUsers = ({ size = 16, className }: P) =>
       <path d="M16 6.2a3 3 0 0 1 0 5.8M17.5 14.9c2 .6 3.5 2.3 3.5 4.6" />
     </>,
   );
-
-/** Mini SMPTE color bars for the no-signal monitor state. */
-export const SmpteBars = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 21 7" className={className} aria-hidden="true" preserveAspectRatio="none">
-    <rect width="21" height="7" fill="#0d1119" />
-    {[
-      '#c8c8c8',
-      '#c8c800',
-      '#00c8c8',
-      '#00c800',
-      '#c800c8',
-      '#c80000',
-      '#0000c8',
-    ].map((c, i) => (
-      <rect key={c} x={i * 3} y="0.5" width="3" height="3.6" fill={c} />
-    ))}
-    <rect x="0.5" y="4.4" width="12" height="2.1" fill="#0d5c9e" />
-    <rect x="13.5" y="4.4" width="7" height="2.1" fill="#12141f" />
-    <rect x="15.2" y="4.9" width="3.6" height="1.1" fill="#e9e6dc" />
-  </svg>
-);
