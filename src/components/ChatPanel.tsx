@@ -3,6 +3,7 @@ import type { ChatMedia, ChatMessage } from '../../shared/protocol';
 import { addRecentEmoji, EMOJI_CATEGORIES, getRecentEmojis } from '../lib/emojis';
 import { giphyFetch, type GiphyItem } from '../lib/giphy';
 import { addRecentMedia, colorFor, getRecentMedia, isEmojiOnly } from '../lib/util';
+import { IconSend, IconSmile, IconX } from './icons';
 
 type Props = {
   chat: ChatMessage[];
@@ -13,6 +14,14 @@ type Props = {
 
 type PickerTab = 'emoji' | 'gif' | 'sticker';
 type MediaKind = 'gif' | 'sticker';
+
+const hhmm = (at: number) => {
+  try {
+    return new Date(at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+};
 
 export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
   const [text, setText] = useState('');
@@ -55,9 +64,12 @@ export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
             </div>
           ) : (
             <div key={m.id} className={`chat-msg ${m.from === meId ? 'mine' : ''}`}>
-              <span className="chat-name" style={{ color: colorFor(m.name) }}>
-                {m.from === meId ? 'Tú' : m.name}
-              </span>
+              <div className="chat-head">
+                <span className="chat-name" style={{ color: colorFor(m.name) }}>
+                  {m.from === meId ? 'Tú' : m.name}
+                </span>
+                <span className="chat-at">{hhmm(m.at)}</span>
+              </div>
               {m.media ? (
                 m.media.kind === 'gif' ? (
                   <a className="chat-gif-link" href={m.media.url} target="_blank" rel="noreferrer">
@@ -89,7 +101,13 @@ export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
       </div>
 
       {picker && (
-        <ChatPicker tab={picker} onTab={setPicker} onEmoji={(ch) => setText((t) => (t + ch).slice(0, 500))} onSendMedia={sendMedia} onClose={() => setPicker(null)} />
+        <ChatPicker
+          tab={picker}
+          onTab={setPicker}
+          onEmoji={(ch) => setText((t) => (t + ch).slice(0, 500))}
+          onSendMedia={sendMedia}
+          onClose={() => setPicker(null)}
+        />
       )}
 
       <form
@@ -101,11 +119,11 @@ export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
       >
         <button
           type="button"
-          className={`icon-btn picker-toggle ${picker ? 'active' : ''}`}
+          className={`icon-btn picker-toggle ${picker ? 'on' : ''}`}
           onClick={() => setPicker(picker ? null : 'emoji')}
           aria-label="Emojis, GIFs y stickers"
         >
-          😊
+          <IconSmile />
         </button>
         <input
           value={text}
@@ -114,8 +132,8 @@ export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
           maxLength={500}
           aria-label="Mensaje"
         />
-        <button className="btn primary" disabled={!text.trim()}>
-          Enviar
+        <button className="key primary" disabled={!text.trim()} aria-label="Enviar">
+          <IconSend />
         </button>
       </form>
     </div>
@@ -140,20 +158,24 @@ function ChatPicker({
   return (
     <div className="chat-picker">
       <div className="chat-picker-tabs">
-        <button className={tab === 'emoji' ? 'active' : ''} onClick={() => onTab('emoji')}>
+        <button className={`tab-btn ${tab === 'emoji' ? 'active' : ''}`} onClick={() => onTab('emoji')}>
           Emojis
         </button>
-        <button className={tab === 'gif' ? 'active' : ''} onClick={() => onTab('gif')}>
+        <button className={`tab-btn ${tab === 'gif' ? 'active' : ''}`} onClick={() => onTab('gif')}>
           GIFs
         </button>
-        <button className={tab === 'sticker' ? 'active' : ''} onClick={() => onTab('sticker')}>
+        <button className={`tab-btn ${tab === 'sticker' ? 'active' : ''}`} onClick={() => onTab('sticker')}>
           Stickers
         </button>
-        <button className="picker-close" onClick={onClose} aria-label="Cerrar panel">
-          ✕
+        <button className="icon-btn picker-close" onClick={onClose} aria-label="Cerrar panel">
+          <IconX size={15} />
         </button>
       </div>
-      {tab === 'emoji' ? <EmojiPicker onPick={onEmoji} /> : <MediaPicker kind={tab} onSendMedia={onSendMedia} />}
+      {tab === 'emoji' ? (
+        <EmojiPicker onPick={onEmoji} />
+      ) : (
+        <MediaPicker kind={tab} onSendMedia={onSendMedia} />
+      )}
     </div>
   );
 }
@@ -169,7 +191,7 @@ function EmojiPicker({ onPick }: { onPick(ch: string): void }) {
     <div className="chat-picker-body">
       {recents.length > 0 && (
         <>
-          <p className="picker-section">Recientes</p>
+          <span className="picker-section">Recientes</span>
           <div className="emoji-grid">
             {recents.map((ch, i) => (
               <button key={`${ch}-${i}`} type="button" onClick={() => pick(ch)}>
@@ -179,7 +201,7 @@ function EmojiPicker({ onPick }: { onPick(ch: string): void }) {
           </div>
         </>
       )}
-      <p className="picker-section">{EMOJI_CATEGORIES[cat].name}</p>
+      <span className="picker-section">{EMOJI_CATEGORIES[cat].name}</span>
       <div className="emoji-grid">
         {EMOJI_CATEGORIES[cat].emojis.map((ch, i) => (
           <button key={`${ch}-${i}`} type="button" onClick={() => pick(ch)}>
@@ -189,7 +211,13 @@ function EmojiPicker({ onPick }: { onPick(ch: string): void }) {
       </div>
       <div className="emoji-cats">
         {EMOJI_CATEGORIES.map((c, i) => (
-          <button key={c.name} type="button" className={i === cat ? 'active' : ''} onClick={() => setCat(i)} title={c.name}>
+          <button
+            key={c.name}
+            type="button"
+            className={i === cat ? 'active' : ''}
+            onClick={() => setCat(i)}
+            title={c.name}
+          >
             {c.icon}
           </button>
         ))}
@@ -252,7 +280,7 @@ function MediaPicker({ kind, onSendMedia }: { kind: MediaKind; onSendMedia(media
 
       {!error && recents.length > 0 && (
         <>
-          <p className="picker-section">Recientes</p>
+          <span className="picker-section">Recientes</span>
           <div className={`media-grid ${kind === 'sticker' ? 'stickers' : ''}`}>
             {recents.map((m) => (
               <button key={m.url} type="button" onClick={() => onSendMedia(m)} aria-label="Enviar de nuevo">
@@ -265,7 +293,7 @@ function MediaPicker({ kind, onSendMedia }: { kind: MediaKind; onSendMedia(media
 
       {!error && items && items.length > 0 && (
         <>
-          <p className="picker-section">{debounced ? 'Resultados' : 'Tendencias'}</p>
+          <span className="picker-section">{debounced ? 'Resultados' : 'Tendencias'}</span>
           <div className={`media-grid ${kind === 'sticker' ? 'stickers' : ''}`}>
             {items.map((it) => (
               <button key={it.id} type="button" onClick={() => send(it)} aria-label="Enviar">
@@ -276,7 +304,9 @@ function MediaPicker({ kind, onSendMedia }: { kind: MediaKind; onSendMedia(media
         </>
       )}
 
-      {!error && items && items.length === 0 && <p className="picker-hint">Sin resultados. Prueba con otra búsqueda.</p>}
+      {!error && items && items.length === 0 && (
+        <p className="picker-hint">Sin resultados. Prueba con otra búsqueda.</p>
+      )}
       {!error && !items && <p className="picker-hint">Buscando…</p>}
     </div>
   );

@@ -16,8 +16,8 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#0a0b10',
-        theme_color: '#0a0b10',
+        background_color: '#080b11',
+        theme_color: '#080b11',
         categories: ['social', 'entertainment'],
         icons: [
           { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png' },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Participant } from '../../shared/protocol';
 import { colorFor } from '../lib/util';
+import { IconSignal } from './icons';
 
 type Props = {
   participants: Participant[];
@@ -17,15 +18,16 @@ export default function PeoplePanel({ participants, meId, name, onRename }: Prop
       <ul className="people-list">
         {participants.map((p) => (
           <li key={p.id} className={p.id === meId ? 'me' : ''}>
-            <span className="dot" style={{ background: colorFor(p.name) }} aria-hidden="true" />
+            <span className="sig" style={{ ['--sigc' as string]: colorFor(p.name), color: colorFor(p.name) }}>
+              <IconSignal level={3} />
+            </span>
             <span className="people-name">
-              {p.name}
-              {p.id === meId ? ' (tú)' : ''}
+              {p.name} {p.id === meId && <b>(tú)</b>}
             </span>
           </li>
         ))}
         {participants.length <= 1 && (
-          <p className="hint">Comparte el código de la sala para que se una más gente.</p>
+          <p className="hint">Comparte la frecuencia de la sala para que se una más gente.</p>
         )}
       </ul>
 
@@ -43,7 +45,7 @@ export default function PeoplePanel({ participants, meId, name, onRename }: Prop
           placeholder="Tu nombre"
           aria-label="Tu nombre"
         />
-        <button className="btn primary" disabled={!draft.trim()}>
+        <button className="key primary" disabled={!draft.trim()}>
           Guardar
         </button>
       </form>
