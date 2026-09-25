@@ -85,7 +85,7 @@ const RECENT_MEDIA_MAX = 30;
 
 export function getRecentMedia(kind: 'gif' | 'sticker'): ChatMedia[] {
   try {
-    const raw = localStorage.getItem(`syncplay.recent.${kind}`);
+    const raw = localStorage.getItem(`playsync.recent.${kind}`);
     const arr = raw ? (JSON.parse(raw) as unknown) : [];
     if (!Array.isArray(arr)) return [];
     return arr.filter(
@@ -100,7 +100,7 @@ export function getRecentMedia(kind: 'gif' | 'sticker'): ChatMedia[] {
 export function addRecentMedia(kind: 'gif' | 'sticker', media: ChatMedia): void {
   try {
     const next = [media, ...getRecentMedia(kind).filter((x) => x.url !== media.url)].slice(0, RECENT_MEDIA_MAX);
-    localStorage.setItem(`syncplay.recent.${kind}`, JSON.stringify(next));
+    localStorage.setItem(`playsync.recent.${kind}`, JSON.stringify(next));
   } catch {
     /* private mode */
   }

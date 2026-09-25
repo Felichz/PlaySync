@@ -1,4 +1,4 @@
-# SyncPlay — Watch YouTube together
+# PlaySync — Watch YouTube together
 
 A synchronized YouTube watch party, with no accounts, for every platform: it runs in the browser on any device (PC, Android, iPhone) and installs as a **Progressive Web App**.
 

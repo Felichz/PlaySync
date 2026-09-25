@@ -16,20 +16,20 @@ const STATUS_TEXT: Record<string, string> = {
 };
 
 export default function Room({ code, onLeave }: { code: string; onLeave(): void }) {
-  const room = useRoom(code, getLS('syncplay.name'));
+  const room = useRoom(code, getLS('playsync.name'));
   const [tab, setTab] = useState<Tab>('queue');
   const [unread, setUnread] = useState(0);
   const seenRef = useRef(0);
 
   useEffect(() => {
-    document.title = `Sala ${code} · SyncPlay`;
+    document.title = `Sala ${code} · PlaySync`;
     return () => {
-      document.title = 'SyncPlay — Mira YouTube juntos';
+      document.title = 'PlaySync — Mira YouTube juntos';
     };
   }, [code]);
 
   useEffect(() => {
-    setLS('syncplay.lastRoom', code);
+    setLS('playsync.lastRoom', code);
   }, [code]);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
     const url = `${window.location.origin}${window.location.pathname}#/r/${code}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'SyncPlay', text: `Únete a mi sala: ${code}`, url });
+        await navigator.share({ title: 'PlaySync', text: `Únete a mi sala: ${code}`, url });
       } else {
         await navigator.clipboard.writeText(url);
         room.showToast('Enlace copiado al portapapeles');
@@ -87,7 +87,7 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
           <span className="mark">
             <IconPlay size={11} />
           </span>
-          SyncPlay
+          PlaySync
         </span>
         <span className="room-pill" title={STATUS_TEXT[room.status]}>
           <span className={`conn-dot ${room.status}`} />

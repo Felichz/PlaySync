@@ -555,5 +555,5 @@ function serveStatic(pathname: string, res: http.ServerResponse): void {
 }
 
 server.listen(PORT, () => {
-  console.log(`SyncPlay escuchando en http://localhost:${PORT}`);
+  console.log(`PlaySync escuchando en http://localhost:${PORT}`);
 });
