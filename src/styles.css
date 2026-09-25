@@ -894,6 +894,8 @@ input[type='range']:disabled {
 }
 
 .chat-gif-link {
+  max-width: min(230px, 100%);
+  max-height: min(230px, 100%);
   display: block;
   max-width: 100%;
 }
@@ -901,7 +903,9 @@ input[type='range']:disabled {
 .chat-msg img.chat-sticker {
   display: block;
   width: 148px;
+  height: 148px;
   max-width: 55vw;
+  max-height: 55vw;
 }
 
 .chat-form {
