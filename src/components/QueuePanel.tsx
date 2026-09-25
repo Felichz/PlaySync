@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { VideoItem } from '../../shared/protocol';
 import { fetchTitle, parseVideoId } from '../lib/util';
+import { IconPlay, IconPlus, IconX } from './icons';
 
 type Props = {
   queue: VideoItem[];
@@ -45,26 +46,33 @@ export default function QueuePanel({ queue, currentVideoId, onAdd, onRemove, onJ
           inputMode="url"
           aria-label="Enlace de YouTube"
         />
-        <button className="btn primary" disabled={busy || !input.trim()}>
-          {busy ? '…' : 'Añadir'}
+        <button className="key primary" disabled={busy || !input.trim()}>
+          {busy ? '…' : <IconPlus size={16} />}
+          {busy ? '' : 'Añadir'}
         </button>
       </form>
       {err && <p className="form-error">{err}</p>}
 
       <ul className="queue-list">
-        {queue.length === 0 && <p className="hint">La cola está vacía. Lo que añadas aquí sonará después del video actual.</p>}
+        {queue.length === 0 && (
+          <p className="hint">La programación está vacía. Lo que añadas se emitirá después del video actual.</p>
+        )}
         {queue.map((item, i) => (
-          <li key={`${item.videoId}-${i}`} className={`queue-item ${item.videoId === currentVideoId ? 'current' : ''}`}>
+          <li
+            key={`${item.videoId}-${i}`}
+            className={`queue-item ${item.videoId === currentVideoId ? 'current' : ''}`}
+          >
+            <span className="queue-num">{String(i + 1).padStart(2, '0')}</span>
             <img src={`https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`} alt="" loading="lazy" />
             <div className="queue-info">
               <span className="queue-title">{item.title ?? item.videoId}</span>
-              <span className="queue-by">añadido por {item.addedBy ?? '?'}</span>
+              <span className="queue-by">programó {item.addedBy ?? '?'}</span>
             </div>
-            <button className="icon-btn" onClick={() => onJump(i)} aria-label="Reproducir ahora">
-              ▶
+            <button className="icon-btn" onClick={() => onJump(i)} aria-label="Emitir ahora">
+              <IconPlay size={15} />
             </button>
-            <button className="icon-btn" onClick={() => onRemove(i)} aria-label="Quitar de la cola">
-              ✕
+            <button className="icon-btn" onClick={() => onRemove(i)} aria-label="Quitar de la programación">
+              <IconX />
             </button>
           </li>
         ))}
