@@ -78,6 +78,7 @@ export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
                       src={m.media.url}
                       width={m.media.width}
                       height={m.media.height}
+                      max-height={m.media.width}
                       alt="GIF"
                       loading="lazy"
                     />
