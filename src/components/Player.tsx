@@ -3,8 +3,7 @@ import type { RoomState } from '../../shared/protocol';
 import { effectivePosition, type SyncClient } from '../lib/sync';
 import { loadYT, YT_STATE, type YTPlayer } from '../lib/yt';
 import { fmtTime, getLS, setLS } from '../lib/util';
-import { IconFull, IconMute, IconPause, IconPlay, IconVolume } from './icons';
-import { SmpteBars } from './icons';
+import { IconFilm, IconFull, IconMute, IconPause, IconPlay, IconVolume } from './icons';
 
 type Props = {
   sync: SyncClient | null;
@@ -13,57 +12,6 @@ type Props = {
 };
 
 type Pending = { until: number; isPlaying?: boolean; position?: number };
-
-/** Broadcast VU meter: the needle follows real playback state. */
-function VU({ live }: { live: boolean }) {
-  const [angles, setAngles] = useState<[number, number]>([-38, -38]);
-  const liveRef = useRef(live);
-  useEffect(() => {
-    liveRef.current = live;
-  }, [live]);
-
-  useEffect(() => {
-    let raf = 0;
-    let a1 = -38;
-    let a2 = -38;
-    let last = performance.now();
-    const tick = (t: number) => {
-      const dt = Math.min(64, t - last);
-      last = t;
-      if (liveRef.current) {
-        // Damped random walk while the room is on air.
-        const target1 = -10 + Math.random() * 46;
-        const target2 = -10 + Math.random() * 46;
-        a1 += (target1 - a1) * (dt / 190);
-        a2 += (target2 - a2) * (dt / 230);
-      } else {
-        a1 += (-38 - a1) * (dt / 320);
-        a2 += (-38 - a2) * (dt / 320);
-      }
-      setAngles([a1, a2]);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  return (
-    <div className={`vu ${live ? 'live' : ''}`} aria-hidden="true">
-      {angles.map((a, i) => (
-        <div className="vu-meter" key={i}>
-          <svg viewBox="0 0 44 34" preserveAspectRatio="none">
-            <path d="M8 30 A16 16 0 0 1 36 30" fill="none" stroke="#26304a" strokeWidth="1.5" />
-            <path d="M30.5 18.5 A16 16 0 0 1 36 30" fill="none" stroke="#e5484d" strokeWidth="1.5" />
-            <path d="M26 16.4 A16 16 0 0 1 30.5 18.5" fill="none" stroke="#f5b84a" strokeWidth="1.5" />
-            <path d="M8 30 A16 16 0 0 1 26 16.4" fill="none" stroke="#3fbf7f" strokeWidth="1.5" />
-          </svg>
-          <div className="vu-needle" style={{ ['--a' as string]: `${a.toFixed(1)}deg` }} />
-          <span className="vu-lamp" />
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function Player({ sync, state, onOpenQueue }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -88,8 +36,6 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
     return Number.isFinite(v) && v > 0 ? Math.min(v, 100) : 100;
   });
   const [scrub, setScrub] = useState<number | null>(null);
-  const titleRef = useRef<HTMLSpanElement>(null);
-  const [marq, setMarq] = useState<{ scrolls: boolean; px: number }>({ scrolls: false, px: 0 });
 
   const stateRef = useRef<RoomState | null>(state);
   const syncRef = useRef<SyncClient | null>(sync);
@@ -370,32 +316,14 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
     else void el.requestFullscreen?.().catch(() => {});
   };
 
-  // Authored marquee: measure overflow after title changes and on resize.
-  useEffect(() => {
-    const measure = () => {
-      const el = titleRef.current;
-      if (!el) return;
-      const over = el.scrollWidth - el.clientWidth;
-      setMarq(over > 8 ? { scrolls: true, px: over } : { scrolls: false, px: 0 });
-    };
-    measure();
-    const t = setTimeout(measure, 400); // fonts can land late
-    window.addEventListener('resize', measure);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener('resize', measure);
-    };
-  }, [state?.videoTitle]);
-
   const hasVideo = !!state?.videoId;
   const playing = !!state?.isPlaying;
-  // Unstarted monitor: keep YouTube's own (red) chrome out of the frame
-  // until there is real signal to show.
-  const cued = hasVideo && ready && !playing && cur < 0.5 && !error;
-  const frozen = hasVideo && ready && !playing && !cued;
   const max = Math.max(dur, 1);
   const sliderValue = Math.min(scrub ?? cur, max);
   const fillPct = (sliderValue / max) * 100;
+  // Clean cue card before first play: hides the embed's own chrome.
+  const cued = hasVideo && ready && !playing && cur < 0.5 && !error;
+  const frozen = hasVideo && ready && !playing && !cued;
 
   const commitScrub = () => {
     if (scrub != null) {
@@ -406,60 +334,55 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
 
   return (
     <div className={`player ${frozen ? 'is-paused' : ''}`} ref={wrapRef}>
-      <div className="monitor">
+      <div className="player-frame">
         <div ref={hostRef} className="yt-host" />
 
-        {hasVideo && !ready && <div className="monitor-empty">…</div>}
+        {hasVideo && !ready && <div className="player-empty">…</div>}
 
         {!hasVideo && (
-          <div className="monitor-empty">
-            <SmpteBars className="bars" />
-            <p>Sin señal</p>
-            <button className="key primary" onClick={onOpenQueue}>
-              Añadir a programación
+          <div className="player-empty">
+            <span className="glyph">
+              <IconFilm size={22} />
+            </span>
+            <p>Nada en reproducción todavía</p>
+            <button className="btn primary" onClick={onOpenQueue}>
+              Añadir un video
             </button>
           </div>
         )}
 
         {cued && (
-          <button className="monitor-overlay cue" onClick={playing ? undefined : userPlay} aria-label="Reproducir">
-            {state?.videoTitle ? (
-              <span className="cue-title" title={state.videoTitle}>
-                {state.videoTitle}
-              </span>
-            ) : (
-              <SmpteBars className="bars" />
-            )}
-            <span className="key transport primary">
+          <button className="player-overlay" onClick={userPlay} aria-label="Reproducir">
+            {state?.videoTitle && <span className="cue-title">{state.videoTitle}</span>}
+            <span className="big-play">
               <IconPlay size={26} />
             </span>
-            <span className="cue-hint">Listo para emitir — toca para empezar</span>
+            <span className="cue-hint">Toca para reproducir</span>
           </button>
         )}
 
         {blocked && (
-          <button className="monitor-overlay" onClick={activateFromOverlay}>
-            <span className="key transport primary">
-              <IconPlay size={30} />
+          <button className="player-overlay" onClick={activateFromOverlay}>
+            <span className="big-play">
+              <IconPlay size={26} />
             </span>
-            <span>Toca para emitir con sonido</span>
+            <span className="cue-hint">Toca para reproducir con sonido</span>
           </button>
         )}
 
-        {error && <div className="monitor-error">{error}</div>}
+        {error && <div className="player-error">{error}</div>}
       </div>
 
-      <div className="transport">
-        <VU live={playing && hasVideo} />
+      <div className="controls">
         <button
-          className={`key transport ${hasVideo ? 'primary' : ''}`}
+          className="play-btn"
           onClick={playing ? userPause : userPlay}
           disabled={!hasVideo}
           aria-label={playing ? 'Pausar' : 'Reproducir'}
         >
-          {playing ? <IconPause size={24} /> : <IconPlay size={24} />}
+          {playing ? <IconPause size={17} /> : <IconPlay size={17} />}
         </button>
-        <span className="timecode now">{fmtTime(scrub ?? cur)}</span>
+        <span className="time">{fmtTime(scrub ?? cur)}</span>
         <input
           className="seek"
           type="range"
@@ -469,7 +392,7 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
           value={sliderValue}
           disabled={!hasVideo}
           style={{
-            ['--track' as string]: `linear-gradient(to right, var(--amber) ${fillPct}%, var(--bg3) ${fillPct}%)`,
+            ['--track' as string]: `linear-gradient(to right, var(--accent) ${fillPct}%, var(--bg3) ${fillPct}%)`,
           }}
           onPointerDown={() => setScrub(cur)}
           onChange={(e) => setScrub(Number(e.target.value))}
@@ -477,7 +400,7 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
           onTouchEnd={commitScrub}
           aria-label="Progreso del video"
         />
-        <span className="timecode">{fmtTime(dur)}</span>
+        <span className="time">{fmtTime(dur)}</span>
         <button className="icon-btn" onClick={toggleMute} aria-label="Silenciar">
           {muted || vol === 0 ? <IconMute /> : <IconVolume />}
         </button>
@@ -497,17 +420,8 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
 
       {state?.videoTitle && (
         <div className="now-playing">
-          <span className="tag">EMITIENDO</span>
-          <span
-            ref={titleRef}
-            className={`title ${marq.scrolls ? 'scrolls' : ''}`}
-            style={{
-              ['--marq' as string]: `-${marq.px}px`,
-              ['--marq-dur' as string]: `${Math.max(8, marq.px / 22)}s`,
-            }}
-            title={state.videoTitle}
-          >
-            {state.videoTitle}
+          <span className="title">
+            <strong>{state.videoTitle}</strong>
           </span>
         </div>
       )}

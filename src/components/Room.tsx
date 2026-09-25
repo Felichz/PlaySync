@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRoom } from '../hooks/useRoom';
 import { getLS, setLS } from '../lib/util';
 import ChatPanel from './ChatPanel';
-import { IconBack, IconChat, IconFilm, IconShare, IconUsers } from './icons';
+import { IconBack, IconChat, IconFilm, IconPlay, IconShare, IconUsers } from './icons';
 import PeoplePanel from './PeoplePanel';
 import Player from './Player';
 import QueuePanel from './QueuePanel';
@@ -10,7 +10,7 @@ import QueuePanel from './QueuePanel';
 type Tab = 'chat' | 'queue' | 'people';
 
 const STATUS_TEXT: Record<string, string> = {
-  connecting: 'Sintonizando…',
+  connecting: 'Conectando…',
   online: 'En línea',
   offline: 'Reconectando…',
 };
@@ -19,7 +19,6 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
   const room = useRoom(code, getLS('syncplay.name'));
   const [tab, setTab] = useState<Tab>('queue');
   const [unread, setUnread] = useState(0);
-  const [clock, setClock] = useState(() => new Date());
   const seenRef = useRef(0);
 
   useEffect(() => {
@@ -32,11 +31,6 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
   useEffect(() => {
     setLS('syncplay.lastRoom', code);
   }, [code]);
-
-  useEffect(() => {
-    const iv = setInterval(() => setClock(new Date()), 1000);
-    return () => clearInterval(iv);
-  }, []);
 
   useEffect(() => {
     if (tab === 'chat') {
@@ -66,9 +60,9 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
   const live = !!room.state?.isPlaying;
 
   const tabs: { id: Tab; label: string; icon: ReactNode; badge?: number }[] = [
-    { id: 'chat', label: 'Chat', icon: <IconChat size={15} />, badge: unread || undefined },
-    { id: 'queue', label: 'Programación', icon: <IconFilm size={15} />, badge: room.state?.queue.length || undefined },
-    { id: 'people', label: 'Cabina', icon: <IconUsers size={15} />, badge: room.participants.length },
+    { id: 'chat', label: 'Chat', icon: <IconChat size={14} />, badge: unread || undefined },
+    { id: 'queue', label: 'Cola', icon: <IconFilm size={14} />, badge: room.state?.queue.length || undefined },
+    { id: 'people', label: 'Gente', icon: <IconUsers size={14} />, badge: room.participants.length },
   ];
 
   const tabButtons = (className: string) => (
@@ -83,29 +77,28 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
     </nav>
   );
 
-  const hhmmss = clock.toLocaleTimeString('es', { hour12: false });
-
   return (
     <div className="room">
       <header className="topbar">
         <button className="icon-btn" onClick={onLeave} aria-label="Salir de la sala">
           <IconBack />
         </button>
-        <span className="logotype">
-          SYNC<b>PLAY</b>
+        <span className="brand">
+          <span className="mark">
+            <IconPlay size={11} />
+          </span>
+          SyncPlay
         </span>
-        <div className="freq" title={STATUS_TEXT[room.status]}>
-          <span className="freq-label">FREC</span>
-          <span className="freq-code">{code}</span>
+        <span className="room-pill" title={STATUS_TEXT[room.status]}>
           <span className={`conn-dot ${room.status}`} />
-        </div>
-        <span className="studio-clock">{hhmmss}</span>
-        <span className={`onair ${live ? 'live' : ''}`} title={live ? 'Transmitiendo' : 'En pausa'}>
-          <i />
-          {live ? 'AL AIRE' : 'EN PAUSA'}
+          <span className="code">{code}</span>
         </span>
-        <button className="key small" onClick={() => void share()}>
-          <IconShare size={14} />
+        <span className={`live-chip ${live ? 'live' : ''}`}>
+          <i />
+          {live ? <span>En vivo</span> : <span>En pausa</span>}
+        </span>
+        <button className="btn ghost small" onClick={() => void share()}>
+          <IconShare size={13} />
           Compartir
         </button>
       </header>
