@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatMessage, Participant, RoomState } from '../../shared/protocol';
+import type { ChatMedia, ChatMessage, Participant, RoomState } from '../../shared/protocol';
 import { SyncClient, type ConnStatus } from '../lib/sync';
 
 export type RoomActions = {
@@ -8,6 +8,7 @@ export type RoomActions = {
   queueRemove(i: number): void;
   queueJump(i: number): void;
   sendChat(text: string): void;
+  sendMedia(media: ChatMedia): void;
   rename(name: string): void;
 };
 
@@ -75,6 +76,7 @@ export function useRoom(code: string, initialName: string) {
       queueRemove: (i) => sync?.send({ type: 'queue-remove', index: i }),
       queueJump: (i) => sync?.send({ type: 'queue-jump', index: i }),
       sendChat: (text) => sync?.send({ type: 'chat', text }),
+      sendMedia: (media) => sync?.send({ type: 'chat', text: '', media }),
       rename: (n) => {
         const clean = n.trim().slice(0, 24) || 'Invitado';
         setName(clean);

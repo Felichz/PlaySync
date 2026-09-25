@@ -11,6 +11,14 @@ export type Participant = {
   name: string;
 };
 
+/** Media attachment (GIF/sticker) attached to a chat message. */
+export type ChatMedia = {
+  kind: 'gif' | 'sticker';
+  url: string;
+  width?: number;
+  height?: number;
+};
+
 export type ChatMessage = {
   id: string;
   from: string; // participant id ('' for system messages)
@@ -18,6 +26,7 @@ export type ChatMessage = {
   text: string;
   at: number; // server clock, ms
   system?: boolean;
+  media?: ChatMedia;
 };
 
 /** Authoritative room state. `position` is the base at `lastUpdatedAt`. */
@@ -57,6 +66,6 @@ export type ClientToServer =
   | { type: 'queue-add'; videoId: string; title?: string }
   | { type: 'queue-remove'; index: number }
   | { type: 'queue-jump'; index: number }
-  | { type: 'chat'; text: string }
+  | { type: 'chat'; text: string; media?: ChatMedia }
   | { type: 'ping'; t0: number }
   | { type: 'sync-request' };

@@ -102,7 +102,7 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
           {tabButtons('side-tabs')}
           <div className="tab-content">
             <div className={`panel ${tab === 'chat' ? '' : 'hidden'}`}>
-              <ChatPanel chat={room.chat} meId={room.me} onSend={room.actions.sendChat} />
+              <ChatPanel chat={room.chat} meId={room.me} onSend={room.actions.sendChat} onSendMedia={room.actions.sendMedia} />
             </div>
             <div className={`panel ${tab === 'queue' ? '' : 'hidden'}`}>
               <QueuePanel

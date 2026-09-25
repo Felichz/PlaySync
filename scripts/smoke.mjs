@@ -68,6 +68,20 @@ try {
   const chatB = await b.wait((m) => m.type === 'chat' && m.message.text === 'hola mundo', 'chat');
   check('chat propagates', chatB.message.name === 'Ana');
 
+  a.send({
+    type: 'chat',
+    text: '',
+    media: { kind: 'gif', url: 'https://media.giphy.com/media/test/giphy.gif', width: 200, height: 180 },
+  });
+  const chatM = await b.wait((m) => m.type === 'chat' && m.message.media, 'chat media');
+  check('gif media propagates', chatM.message.media?.kind === 'gif' && chatM.message.media.url.includes('giphy.com'));
+
+  b.msgs.length = 0;
+  a.send({ type: 'chat', text: '', media: { kind: 'gif', url: 'http://evil.example/x.gif' } });
+  await sleep(400);
+  check('insecure media rejected', !b.msgs.some((m) => m.type === 'chat' && m.message.media));
+  b.msgs.length = 0;
+
   a.send({ type: 'load', videoId: 'dQw4w9WgXcQ', title: 'Test video' });
   const stLoad = await b.wait((m) => m.type === 'state' && m.state.videoId === 'dQw4w9WgXcQ', 'load');
   check('load publishes state', stLoad.state.isPlaying === false && stLoad.state.position === 0);
