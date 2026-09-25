@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatMedia, ChatMessage, Participant, RoomState } from '../../shared/protocol';
+import type { ChatMedia, ChatMessage, DriveMedia, Participant, RoomState } from '../../shared/protocol';
 import { SyncClient, type ConnStatus } from '../lib/sync';
 
 export type RoomActions = {
   load(videoId: string, title?: string): void;
+  loadMedia(media: DriveMedia): void;
   queueAdd(videoId: string, title?: string): void;
+  queueAddMedia(media: DriveMedia): void;
   queueRemove(i: number): void;
   queueJump(i: number): void;
   sendChat(text: string): void;
@@ -72,7 +74,9 @@ export function useRoom(code: string, initialName: string) {
   const actions = useMemo<RoomActions>(
     () => ({
       load: (videoId, title) => sync?.send({ type: 'load', videoId, title }),
+      loadMedia: (media) => sync?.send({ type: 'load-media', media }),
       queueAdd: (videoId, title) => sync?.send({ type: 'queue-add', videoId, title }),
+      queueAddMedia: (media) => sync?.send({ type: 'queue-add-media', media }),
       queueRemove: (i) => sync?.send({ type: 'queue-remove', index: i }),
       queueJump: (i) => sync?.send({ type: 'queue-jump', index: i }),
       sendChat: (text) => sync?.send({ type: 'chat', text }),

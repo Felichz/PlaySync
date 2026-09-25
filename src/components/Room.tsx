@@ -119,6 +119,7 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
                 queue={room.state?.queue ?? []}
                 currentVideoId={room.state?.videoId ?? null}
                 onAdd={room.actions.queueAdd}
+                onAddMedia={room.actions.queueAddMedia}
                 onRemove={room.actions.queueRemove}
                 onJump={room.actions.queueJump}
               />
