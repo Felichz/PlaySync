@@ -1,0 +1,13 @@
+# Render blueprint: creates the service with the right configuration.
+# Render picks this file up automatically when creating a "Web Service" from the repo.
+services:
+  - type: web
+    name: syncplay
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
