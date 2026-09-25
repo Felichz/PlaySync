@@ -5,4 +5,5 @@ dev-dist/
 .env
 .DS_Store
 npm-debug.log*
-.impeccable/
+.impeccable/*
+!.impeccable/design.json

@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-25T03:00:00Z",
+  "title": "Design System: PlaySync",
+  "extensions": {
+    "colorMeta": {
+      "bg0": { "role": "neutral", "displayName": "Void", "canonical": "#08090a", "tonalRamp": ["#08090a", "#101113", "#17191c", "#1e2023", "#26282b", "#33353a", "#4a4d53", "#6b6e75"] },
+      "bg1": { "role": "neutral", "displayName": "Panel", "canonical": "#0d0e10" },
+      "bg2": { "role": "neutral", "displayName": "Raised", "canonical": "#141517" },
+      "bg3": { "role": "neutral", "displayName": "Raised High", "canonical": "#1a1c1f" },
+      "bg-hover": { "role": "neutral", "displayName": "Raised Hover", "canonical": "#1f2124" },
+      "line": { "role": "neutral", "displayName": "Hairline", "canonical": "rgba(255, 255, 255, 0.07)" },
+      "line-strong": { "role": "neutral", "displayName": "Hairline Strong", "canonical": "rgba(255, 255, 255, 0.12)" },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#f7f8f8", "tonalRamp": ["#0b0c0d", "#1c1e20", "#2e3134", "#4b4f54", "#75797e", "#9aa0a6", "#c8cbd0", "#f7f8f8"] },
+      "dim": { "role": "neutral", "displayName": "Dim", "canonical": "#9aa0a6" },
+      "faint": { "role": "neutral", "displayName": "Faint", "canonical": "#6b7075" },
+      "accent": { "role": "primary", "displayName": "Indigo", "canonical": "#7b83eb", "tonalRamp": ["#25274f", "#343770", "#44489a", "#555ac2", "#7b83eb", "#8d94f0", "#aab0f5", "#d4d7fb"] },
+      "accent-hi": { "role": "primary", "displayName": "Indigo Hover", "canonical": "#8d94f0" },
+      "accent-dim": { "role": "primary", "displayName": "Indigo Dim", "canonical": "rgba(123, 131, 235, 0.14)" },
+      "green": { "role": "secondary", "displayName": "Signal Green", "canonical": "#4cc38a", "tonalRamp": ["#123526", "#1b5039", "#256b4c", "#368f65", "#4cc38a", "#7dd3ab", "#a8e3c6", "#d6f2e3"] },
+      "green-dim": { "role": "secondary", "displayName": "Signal Green Dim", "canonical": "rgba(76, 195, 138, 0.15)" },
+      "red": { "role": "tertiary", "displayName": "Signal Red", "canonical": "#f95d5d", "tonalRamp": ["#4a1a1a", "#6e2626", "#933434", "#c74545", "#f95d5d", "#fb8787", "#fdafaf", "#fed7d7"] },
+      "red-dim": { "role": "tertiary", "displayName": "Signal Red Dim", "canonical": "rgba(249, 93, 93, 0.14)" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Landing headline only." },
+      "title": { "displayName": "Title", "purpose": "Buttons, video titles, names, panel headers." },
+      "body": { "displayName": "Body", "purpose": "All UI text at 13-14px." },
+      "label": { "displayName": "Label", "purpose": "Field and section labels." },
+      "mono": { "displayName": "Mono Readout", "purpose": "Room codes and timecodes only." }
+    },
+    "shadows": [
+      { "name": "shadow-1", "value": "0 1px 2px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)", "purpose": "Inputs at rest and small keys." },
+      { "name": "shadow-2", "value": "0 1px 2px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)", "purpose": "Cards, player frame, toasts." }
+    ],
+    "motion": [
+      { "name": "ease-state", "value": "150ms cubic-bezier(0.25, 0.46, 0.45, 0.94)", "purpose": "Every hover/focus/active state change." },
+      { "name": "pulse", "value": "1.2s ease-in-out infinite (opacity 0.4 at 50%)", "purpose": "Offline connection dot." },
+      { "name": "live-pulse", "value": "2s ease-in-out infinite", "purpose": "Green live chip dot while playing." },
+      { "name": "pause-dim", "value": "filter brightness(0.45) saturate(0.7), 250ms ease", "purpose": "Frozen frame while the room is paused." }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "max-width 560px" },
+      { "name": "landscape-phone", "value": "orientation landscape, 520-939px" },
+      { "name": "desktop", "value": "min-width 940px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The only filled control; every interactive moment.",
+      "html": "<button class=\"ds-btn-primary\">Crear sala</button>",
+      "css": ".ds-btn-primary { font: 500 13.5px/1 Inter, system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 8px; padding: 8px 14px; background: #7b83eb; color: #fff; border: 1px solid transparent; box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 1px 3px rgba(0,0,0,0.3); cursor: pointer; transition: background 150ms cubic-bezier(0.25,0.46,0.45,0.94), transform 60ms ease; } .ds-btn-primary:hover { background: #8d94f0; } .ds-btn-primary:active { transform: translateY(0.5px); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action on raised surface.",
+      "html": "<button class=\"ds-btn-ghost\">Compartir</button>",
+      "css": ".ds-btn-ghost { font: 500 13.5px/1 Inter, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 7px; border-radius: 8px; padding: 8px 14px; background: #141517; color: #f7f8f8; border: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background 150ms cubic-bezier(0.25,0.46,0.45,0.94), border-color 150ms cubic-bezier(0.25,0.46,0.45,0.94); } .ds-btn-ghost:hover { background: #1f2124; border-color: rgba(255,255,255,0.12); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Void-black field with strong hairline border.",
+      "html": "<input class=\"ds-input\" placeholder=\"Escribe un mensaje…\" />",
+      "css": ".ds-input { font: 400 13.5px/1.4 Inter, system-ui, sans-serif; color: #f7f8f8; background: #08090a; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 9px 12px; outline: none; min-width: 0; transition: border-color 150ms cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 150ms cubic-bezier(0.25,0.46,0.45,0.94); } .ds-input::placeholder { color: #6b7075; } .ds-input:hover { border-color: rgba(255,255,255,0.2); } .ds-input:focus-visible { border-color: #7b83eb; box-shadow: 0 0 0 3px rgba(123,131,235,0.14); }"
+    },
+    {
+      "name": "Room Pill",
+      "kind": "chip",
+      "refersTo": "room-pill",
+      "description": "Status readout: connection dot + room code in mono.",
+      "html": "<span class=\"ds-room-pill\"><span class=\"ds-dot\"></span><span class=\"ds-code\">TSEB3X</span></span>",
+      "css": ".ds-room-pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; background: #141517; border: 1px solid rgba(255,255,255,0.07); } .ds-dot { width: 7px; height: 7px; border-radius: 50%; background: #4cc38a; box-shadow: 0 0 6px rgba(76,195,138,0.5); } .ds-code { font: 500 12px/1 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: 0.14em; color: #f7f8f8; }"
+    },
+    {
+      "name": "Live Chip",
+      "kind": "chip",
+      "refersTo": "live-chip-live",
+      "description": "Green pulse while the room is playing.",
+      "html": "<span class=\"ds-live\"><i></i>En vivo</span>",
+      "css": ".ds-live { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font: 600 11.5px/1 Inter, system-ui, sans-serif; color: #d7f5e5; border: 1px solid rgba(76,195,138,0.4); background: rgba(76,195,138,0.15); } .ds-live i { width: 6px; height: 6px; border-radius: 50%; background: #4cc38a; box-shadow: 0 0 6px #4cc38a; animation: ds-pulse 2s ease-in-out infinite; } @keyframes ds-pulse { 50% { opacity: 0.5; } }"
+    },
+    {
+      "name": "Tab Button",
+      "kind": "nav",
+      "refersTo": "tab-btn",
+      "description": "Quiet pill tab; active gains a raised surface.",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab active\">Chat</button><button class=\"ds-tab\">Cola</button><button class=\"ds-tab\">Gente</button></nav>",
+      "css": ".ds-tabs { display: flex; gap: 2px; } .ds-tab { font: 500 13px/1 Inter, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 6px; color: #9aa0a6; background: none; border: none; cursor: pointer; transition: background 150ms cubic-bezier(0.25,0.46,0.45,0.94), color 150ms cubic-bezier(0.25,0.46,0.45,0.94); } .ds-tab:hover { color: #f7f8f8; } .ds-tab.active { color: #f7f8f8; background: #141517; }"
+    },
+    {
+      "name": "Chat Bubble (own)",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Raised bubble, indigo tint and broken corner on the sender side.",
+      "html": "<div class=\"ds-bubble\">esto se ve mucho mejor</div>",
+      "css": ".ds-bubble { display: inline-block; font: 400 13.5px/1.45 Inter, system-ui, sans-serif; color: #f7f8f8; background: rgba(123,131,235,0.14); border: 1px solid rgba(123,131,235,0.28); border-radius: 12px 4px 12px 12px; padding: 7px 11px; }"
+    },
+    {
+      "name": "Queue Row",
+      "kind": "card",
+      "refersTo": null,
+      "description": "Transparent row that raises on hover with reveal actions.",
+      "html": "<div class=\"ds-row\"><img class=\"ds-thumb\" src=\"\" alt=\"\" /><span class=\"ds-title\">Video title</span><button class=\"ds-act\">✕</button></div>",
+      "css": ".ds-row { display: flex; align-items: center; gap: 10px; padding: 7px; border-radius: 8px; border: 1px solid transparent; transition: background 150ms cubic-bezier(0.25,0.46,0.45,0.94), border-color 150ms cubic-bezier(0.25,0.46,0.45,0.94); } .ds-row:hover { background: #141517; border-color: rgba(255,255,255,0.07); } .ds-thumb { width: 92px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,0.07); } .ds-title { flex: 1; font: 500 13px/1.35 Inter, system-ui, sans-serif; color: #f7f8f8; } .ds-act { opacity: 0; color: #9aa0a6; background: none; border: none; cursor: pointer; transition: opacity 150ms ease; } .ds-row:hover .ds-act { opacity: 1; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Signal, no noise.",
+    "overview": "PlaySync's interface is a precision instrument in layered neutral black. Everything is quiet until it matters: hairline borders separate surfaces instead of boxes-in-boxes, one indigo accent marks every interactive moment, and the only chromatic statements are semantic (green = the room is playing, red = errors). The reference bar is Linear/Raycast — craft you feel in spacing, hover states and micro-transitions, not in decoration.",
+    "keyCharacteristics": [
+      "Layered neutral blacks, four surface steps plus a hover step.",
+      "One accent (indigo) at ≤10% coverage of any screen.",
+      "Hairline white-alpha borders (7–12% white) instead of solid grays.",
+      "150ms ease-out on every state change; nothing bounces, nothing glows.",
+      "Inter everywhere; monospace reserved strictly for codes and timecodes."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Indigo appears only where a user can act or where their own message lives. If a surface is not interactive, it has no accent.", "section": "colors" },
+      { "name": "The Semantic Color Rule", "body": "Green means playing; red means error. Neither is used decoratively.", "section": "colors" },
+      { "name": "The Mono Punctuation Rule", "body": "Monospace marks machine data (codes, clocks); it never styles buttons or prose.", "section": "typography" },
+      { "name": "The Layered Black Rule", "body": "Elevation is a surface step first; shadows only accompany a real floating element (card, overlay), never a flat list row.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Inter 13–14px for all UI text; −0.006em body tracking.",
+      "Do keep borders as white-alpha hairlines (0.07–0.12) on every raised surface.",
+      "Do reserve mono (IBM Plex Mono) for room codes and timecodes.",
+      "Do transition states at 150ms ease-out; scale the seek thumb on hover."
+    ],
+    "donts": [
+      "Don't introduce a second accent or colored decoration; green/red are semantic only.",
+      "Don't use metaphor instruments, retro faces, or skin props — elegance is spacing and order, not costume.",
+      "Don't nest cards; rows live on hairlines or hover surfaces.",
+      "Don't use pills for buttons — pills are status readouts only."
+    ]
+  }
+}
