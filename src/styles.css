@@ -327,11 +327,7 @@ input:focus-visible {
   border: 1px solid var(--line);
 }
 
-@media (min-width: 940px) {
-  .player-frame {
-    width: min(100%, calc((100dvh - 220px) * 16 / 9));
-  }
-}
+/* Desktop and landscape phones: video + side panel (see bottom). */
 
 .player-frame .yt-host,
 .player-frame iframe {
@@ -795,9 +791,8 @@ input[type='range']:disabled {
   text-align: center;
 }
 
-/* ------------------------------------------------------------ desktop */
-
-@media (min-width: 940px) {
+/* Desktop and landscape phones: video + side panel. */
+@media (min-width: 940px), (orientation: landscape) and (min-width: 520px) {
   .room-body {
     flex-direction: row;
   }
@@ -806,6 +801,10 @@ input[type='range']:disabled {
     flex: 1;
     align-items: center;
     overflow: hidden;
+  }
+
+  .player-frame {
+    width: min(100%, calc((100dvh - 220px) * 16 / 9));
   }
 
   .side {
@@ -836,6 +835,18 @@ input[type='range']:disabled {
 
   .toast {
     bottom: 24px;
+  }
+}
+
+/* Landscape phones: narrower panel and a taller video than on desktop. */
+@media (orientation: landscape) and (min-width: 520px) and (max-width: 939.98px) {
+  .side {
+    width: min(46vw, 340px);
+  }
+
+  .player-frame {
+    max-height: calc(100dvh - 175px);
+    width: min(100%, calc((100dvh - 195px) * 16 / 9));
   }
 }
 
