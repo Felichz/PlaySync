@@ -3,17 +3,23 @@ import type { RoomState } from '../../shared/protocol';
 import { effectivePosition, type SyncClient } from '../lib/sync';
 import { loadYT, YT_STATE, type YTPlayer } from '../lib/yt';
 import { fmtBytes, fmtTime, getLS, setLS } from '../lib/util';
-import { IconDrive, IconFull, IconMute, IconPause, IconPlay, IconPlus, IconVolume } from './icons';
+import type { Floater } from '../hooks/useRoom';
+import { IconDrive, IconFull, IconHand, IconLock, IconMute, IconPause, IconPlay, IconVolume } from './icons';
+import YouTubeSearch from './YouTubeSearch';
 
 type Props = {
   sync: SyncClient | null;
   state: RoomState | null;
-  onOpenQueue(): void;
+  canControl: boolean;
+  floaters: Floater[];
+  onLoad(videoId: string, title?: string): void;
+  onQueueAdd(videoId: string, title?: string): void;
+  onRequestControl(): void;
 };
 
 type Pending = { until: number; isPlaying?: boolean; position?: number };
 
-export default function Player({ sync, state, onOpenQueue }: Props) {
+export default function Player({ sync, state, canControl, floaters, onLoad, onQueueAdd, onRequestControl }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -464,6 +470,10 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
   };
 
   const title = state?.media ? state.media.name : state?.videoTitle;
+  const ended = !!state?.ended && (hasVideo || hasMedia);
+  // YouTube refused the embed (channel restriction): whoever drives picks something else.
+  const embedBlocked = !!error && hasVideo && !hasMedia;
+  const showSearch = canControl && ((!hasVideo && !hasMedia) || ended || embedBlocked);
   const volPct = muted ? 0 : vol;
 
   return (
@@ -518,21 +528,35 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
           </div>
         )}
 
-        {!hasVideo && !hasMedia && (
-          <div className="player-empty idle">
+        {showSearch && (
+          <YouTubeSearch
+            endedTitle={ended ? (title ?? 'el video') : null}
+            notice={
+              embedBlocked
+                ? `${title ? `«${title}»` : 'Ese video'} no se puede ver fuera de YouTube. Elige otro.`
+                : null
+            }
+            onPlay={onLoad}
+            onQueue={onQueueAdd}
+            onReplay={userPlay}
+          />
+        )}
+
+        {!canControl && ((!hasVideo && !hasMedia) || ended) && (
+          <div className={`player-empty idle ${ended ? 'over-video' : ''}`}>
             <span className="idle-mark" aria-hidden="true">
               <IconPlay size={26} />
             </span>
-            <h2>La pantalla está lista</h2>
-            <p>Pega un enlace de YouTube o Google Drive en la cola y empieza para todos a la vez.</p>
-            <button className="btn primary" onClick={onOpenQueue}>
-              <IconPlus size={16} />
-              Elegir un video
+            <h2>{ended ? 'Terminó el video' : 'Esperando el primer video'}</h2>
+            <p>Quien tiene el control está eligiendo qué ver. Aparecerá aquí para todos a la vez.</p>
+            <button className="btn soft" onClick={onRequestControl}>
+              <IconHand />
+              Pedir el control
             </button>
           </div>
         )}
 
-        {cued && (
+        {cued && !ended && canControl && (
           <button className="player-overlay" onClick={userPlay} aria-label="Reproducir">
             <span className="big-play">
               <IconPlay size={28} />
@@ -542,7 +566,14 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
           </button>
         )}
 
-        {blocked && (
+        {cued && !ended && !canControl && (
+          <div className="player-overlay passive">
+            {title && <span className="cue-title">{title}</span>}
+            <span className="cue-hint">Listo. Empieza cuando quien tiene el control le dé play.</span>
+          </div>
+        )}
+
+        {blocked && !showSearch && (
           <button className="player-overlay" onClick={activateFromOverlay}>
             <span className="big-play">
               <IconPlay size={28} />
@@ -552,21 +583,35 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
           </button>
         )}
 
-        {error && (
+        {error && !showSearch && (
           <div className="player-error" role="alert">
             {error}
           </div>
         )}
+
+        <div className="floaters" aria-hidden="true">
+          {floaters.map((f) => (
+            <div
+              key={f.id}
+              className={`floater ${f.emoji ? 'emoji' : (f.media?.kind ?? '')} ${f.mine ? 'mine' : ''}`}
+              style={{ ['--x' as string]: f.lane }}
+            >
+              {f.media ? <img src={f.media.url} alt="" /> : <span className="floater-emoji">{f.emoji}</span>}
+              <span className="floater-name">{f.mine ? 'Tú' : f.name}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="controls">
         <button
           className="play-btn"
           onClick={playing ? userPause : userPlay}
-          disabled={!hasSomething()}
-          aria-label={playing ? 'Pausar' : 'Reproducir'}
+          disabled={!hasSomething() || !canControl}
+          aria-label={canControl ? (playing ? 'Pausar' : 'Reproducir') : 'Solo quien tiene el control puede reproducir'}
+          title={canControl ? undefined : 'Solo quien tiene el control puede reproducir'}
         >
-          {playing ? <IconPause size={18} /> : <IconPlay size={18} />}
+          {!canControl ? <IconLock size={16} /> : playing ? <IconPause size={18} /> : <IconPlay size={18} />}
         </button>
         <div className="scrub">
           <span className="time">{fmtTime(scrub ?? cur)}</span>
@@ -577,7 +622,7 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
             max={max}
             step={0.1}
             value={sliderValue}
-            disabled={!hasSomething()}
+            disabled={!hasSomething() || !canControl}
             style={{ ['--fill' as string]: `${fillPct}%` }}
             onPointerDown={() => setScrub(cur)}
             onChange={(e) => setScrub(Number(e.target.value))}
@@ -616,6 +661,12 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
           <h1 className="np-title" title={title}>
             {title}
           </h1>
+          {!canControl && (
+            <button className="control-note" onClick={onRequestControl}>
+              <IconLock size={13} />
+              Solo miras · <b>Pedir el control</b>
+            </button>
+          )}
         </div>
       )}
     </div>

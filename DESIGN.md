@@ -85,6 +85,14 @@ video's own colors spilling into the space behind everything.
   hover (always visible on touch).
 - **Player:** 20px frame (16px on phones) with a warm halo while live; overlays use a radial
   scrim and a pulsing play ring.
+- **YouTube search:** replaces the screen for people with control (idle, ended, embed refused):
+  4-up thumbnail grid with duration badges and hover play; a container query switches it to a
+  dense list inside small frames. "+ Cola" pills turn glow-tinted once queued.
+- **Permissions:** crown badge on the host's avatar; host toggles per person with a glow switch
+  and a "Todos controlan" switch; viewers see a lock on the play button, a "Solo miras · Pedir el
+  control" pill and a dashed note in the queue. Control requests drop in as a glass banner.
+- **Floating reactions:** GIFs, stickers and emoji-only messages rise from the bottom of the
+  frame on a random lane with the sender's name chip (glow for your own), ~5.6s, fullscreen too.
 
 ## Motion
 

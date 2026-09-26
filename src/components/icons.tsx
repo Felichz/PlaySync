@@ -205,3 +205,39 @@ export const IconDrive = ({ size = 16, className }: P) =>
 
 export const IconPencil = ({ size = 15, className }: P) =>
   svg(size, className, <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4" />);
+
+export const IconSearch = ({ size = 17, className }: P) =>
+  svg(
+    size,
+    className,
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.2-4.2" />
+    </>,
+  );
+
+export const IconReplay = ({ size = 16, className }: P) =>
+  svg(size, className, <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4h4" />);
+
+export const IconLock = ({ size = 16, className }: P) =>
+  svg(
+    size,
+    className,
+    <>
+      <rect x="5" y="10.5" width="14" height="9.5" rx="2.5" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+    </>,
+  );
+
+export const IconCrown = ({ size = 14, className }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M3.5 8.2 8 11.5l4-6.2 4 6.2 4.5-3.3-1.7 10H5.2l-1.7-10Z" />
+  </svg>
+);
+
+export const IconHand = ({ size = 15, className }: P) =>
+  svg(
+    size,
+    className,
+    <path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12m0-6.5V5a1.5 1.5 0 0 1 3 0v7m0-5.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-.6a6 6 0 0 1-4.9-2.5L3.8 14a1.5 1.5 0 0 1 2.4-1.8L8 14" />,
+  );

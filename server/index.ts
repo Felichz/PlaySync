@@ -10,7 +10,9 @@ import type {
   ClientToServer,
   DriveMedia,
   Participant,
+  Role,
   RoomState,
+  SearchResult,
   ServerToClient,
   VideoItem,
 } from '../shared/protocol';
@@ -36,11 +38,15 @@ try {
 
 type Conn = {
   id: string;
+  /** Stable per-browser id (survives reloads); never sent to other clients. */
+  clientId: string;
   ws: WebSocket;
   name: string;
   room: Room | null;
   alive: boolean;
   chatTimes: number[];
+  joinedAt: number;
+  lastRequestAt: number;
 };
 
 type Room = {
@@ -56,7 +62,15 @@ type Room = {
   participants: Map<string, Conn>;
   emptySince: number | null;
   lastAdvance: number;
+  ended: boolean;
+  hostClient: string | null;
+  hostAwaySince: number | null;
+  controllers: Set<string>; // clientIds granted control by the host
+  openControl: boolean;
 };
+
+/** How long the host may be gone (reload, flaky network) before the role moves on. */
+const HOST_GRACE_MS = 60_000;
 
 const rooms = new Map<string, Room>();
 const conns = new Set<Conn>();
@@ -96,12 +110,27 @@ function roomState(r: Room): RoomState {
     position: r.position,
     lastUpdatedAt: r.lastUpdatedAt,
     queue: r.queue,
+    ended: r.ended,
+    openControl: r.openControl,
     serverTime: now(),
   };
 }
 
+function roleOf(r: Room, c: Conn): Role {
+  if (c.clientId === r.hostClient) return 'host';
+  return r.controllers.has(c.clientId) ? 'control' : 'viewer';
+}
+
+function canControl(r: Room, c: Conn): boolean {
+  return r.openControl || roleOf(r, c) !== 'viewer';
+}
+
 function participantsOf(r: Room): Participant[] {
-  return [...r.participants.values()].map((c) => ({ id: c.id, name: c.name }));
+  return [...r.participants.values()].map((c) => ({ id: c.id, name: c.name, role: roleOf(r, c) }));
+}
+
+function emitParticipants(r: Room): void {
+  broadcast(r, { type: 'participants', participants: participantsOf(r) });
 }
 
 function sendTo(conn: Conn, msg: ServerToClient): void {
@@ -144,6 +173,11 @@ function getRoom(id: string): Room {
       participants: new Map(),
       emptySince: null,
       lastAdvance: 0,
+      ended: false,
+      hostClient: null,
+      hostAwaySince: null,
+      controllers: new Set(),
+      openControl: false,
     };
     rooms.set(id, r);
   }
@@ -170,6 +204,10 @@ function normTitle(input: unknown): string | undefined {
   if (typeof input !== 'string') return undefined;
   const t = input.trim().slice(0, 200);
   return t || undefined;
+}
+
+function normClientId(input: unknown): string | null {
+  return typeof input === 'string' && /^[\w-]{8,64}$/.test(input) ? input : null;
 }
 
 function cleanName(input: unknown): string {
@@ -213,11 +251,16 @@ function normMedia(input: unknown): ChatMedia | undefined {
 
 // ----------------------------------------------------------------- logic
 
-function join(conn: Conn, roomCode: string, name: string): void {
+function join(conn: Conn, roomCode: string, name: string, clientId: string | null): void {
   if (conn.room) leave(conn);
   const r = getRoom(roomCode);
   conn.room = r;
   conn.name = cleanName(name);
+  conn.clientId = clientId ?? conn.id;
+  conn.joinedAt = now();
+  // Whoever opens the room first hosts it.
+  if (!r.hostClient) r.hostClient = conn.clientId;
+  if (r.hostClient === conn.clientId) r.hostAwaySince = null;
   r.participants.set(conn.id, conn);
   r.emptySince = null;
   sendTo(conn, {
@@ -236,6 +279,9 @@ function leave(conn: Conn): void {
   if (!r) return;
   conn.room = null;
   r.participants.delete(conn.id);
+  if (conn.clientId === r.hostClient && ![...r.participants.values()].some((c) => c.clientId === r.hostClient)) {
+    r.hostAwaySince = now();
+  }
   if (r.participants.size === 0) {
     // Freeze the position so rejoins resume where playback stopped.
     commit(r, { isPlaying: false });
@@ -254,7 +300,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
         sendTo(conn, { type: 'error', code: 'bad-room', message: 'Código de sala inválido' });
         return;
       }
-      join(conn, code, msg.name);
+      join(conn, code, msg.name, normClientId(msg.clientId));
       return;
     }
     case 'rename': {
@@ -293,18 +339,66 @@ function handle(conn: Conn, msg: ClientToServer): void {
   const r = conn.room;
   if (!r) return;
 
+  if (CONTROL_INTENTS.has(msg.type) && !canControl(r, conn)) {
+    sendTo(conn, {
+      type: 'error',
+      code: 'forbidden',
+      message: 'Necesitas control para hacer eso. Pídeselo al anfitrión.',
+    });
+    return;
+  }
+
   switch (msg.type) {
+    case 'grant': {
+      if (roleOf(r, conn) !== 'host' || typeof msg.id !== 'string') return;
+      const target = r.participants.get(msg.id);
+      if (!target || target.clientId === r.hostClient) return;
+      const had = r.controllers.has(target.clientId);
+      if (msg.control && !had) {
+        r.controllers.add(target.clientId);
+        pushSystem(r, `${conn.name} le dio el control a ${target.name}`);
+      } else if (!msg.control && had) {
+        r.controllers.delete(target.clientId);
+        pushSystem(r, `${conn.name} le quitó el control a ${target.name}`);
+      }
+      emitParticipants(r);
+      return;
+    }
+    case 'set-open-control': {
+      if (roleOf(r, conn) !== 'host') return;
+      const open = !!msg.open;
+      if (open === r.openControl) return;
+      r.openControl = open;
+      pushSystem(
+        r,
+        open ? 'Ahora todos pueden controlar el video' : 'Solo el anfitrión y quien tenga control manejan el video',
+      );
+      emitState(r);
+      return;
+    }
+    case 'request-control': {
+      if (canControl(r, conn) || now() - conn.lastRequestAt < 20_000) return;
+      conn.lastRequestAt = now();
+      for (const c of r.participants.values()) {
+        if (roleOf(r, c) === 'host') sendTo(c, { type: 'control-request', id: conn.id, name: conn.name });
+      }
+      sendTo(conn, { type: 'error', code: 'requested', message: 'Le avisamos al anfitrión que quieres el control' });
+      return;
+    }
     case 'load': {
       const vid = normVideoId(msg.videoId);
       if (!vid) return;
-      commit(r, { videoId: vid, videoTitle: normTitle(msg.title) ?? null, media: null, position: 0, isPlaying: false });
-      pushSystem(r, `${conn.name} puso un video`);
+      const title = normTitle(msg.title);
+      r.ended = false;
+      commit(r, { videoId: vid, videoTitle: title ?? null, media: null, position: 0, isPlaying: !!msg.autoplay });
+      pushSystem(r, `${conn.name} puso ${title ?? 'un video'}`);
       emitState(r);
       return;
     }
     case 'load-media': {
       const media = normDriveMedia(msg.media);
       if (!media) return;
+      r.ended = false;
       commit(r, { videoId: null, videoTitle: null, media, position: 0, isPlaying: false });
       pushSystem(r, `${conn.name} puso un archivo${media.name ? `: ${media.name}` : ''}`);
       emitState(r);
@@ -312,7 +406,11 @@ function handle(conn: Conn, msg: ClientToServer): void {
     }
     case 'play': {
       if ((!r.videoId && !r.media) || r.isPlaying) return;
-      commit(r, { isPlaying: true });
+      if (r.ended) {
+        // Play after the end: watch it again from the top.
+        r.ended = false;
+        commit(r, { isPlaying: true, position: 0 });
+      } else commit(r, { isPlaying: true });
       emitState(r);
       return;
     }
@@ -324,14 +422,16 @@ function handle(conn: Conn, msg: ClientToServer): void {
     }
     case 'seek': {
       if ((!r.videoId && !r.media) || typeof msg.position !== 'number' || !Number.isFinite(msg.position)) return;
+      r.ended = false;
       commit(r, { position: Math.max(0, msg.position) });
       emitState(r);
       return;
     }
     case 'ended': {
-      if ((!r.videoId && !r.media) || now() - r.lastAdvance < 3000) return;
+      if ((!r.videoId && !r.media) || r.ended || now() - r.lastAdvance < 3000) return;
       r.lastAdvance = now();
       const next = r.queue.shift();
+      r.ended = !next;
       if (next?.media) {
         commit(r, {
           videoId: null,
@@ -363,6 +463,10 @@ function handle(conn: Conn, msg: ClientToServer): void {
       if (!r.videoId && !r.media) {
         // With nothing playing yet, the queue starts playing right away.
         commit(r, { videoId: vid, videoTitle: item.title ?? null, media: null, position: 0, isPlaying: false });
+      } else if (r.ended) {
+        // The last video finished: the new one takes over immediately.
+        r.ended = false;
+        commit(r, { videoId: vid, videoTitle: item.title ?? null, media: null, position: 0, isPlaying: true });
       } else {
         r.queue.push(item);
       }
@@ -375,6 +479,9 @@ function handle(conn: Conn, msg: ClientToServer): void {
       if (!media) return;
       if (!r.videoId && !r.media) {
         commit(r, { videoId: null, videoTitle: null, media, position: 0, isPlaying: false });
+      } else if (r.ended) {
+        r.ended = false;
+        commit(r, { videoId: null, videoTitle: null, media, position: 0, isPlaying: true });
       } else {
         r.queue.push({ media, title: media.name, addedBy: conn.name });
       }
@@ -392,6 +499,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
       const i = Number(msg.index);
       if (!Number.isInteger(i) || i < 0 || i >= r.queue.length) return;
       const item = r.queue.splice(i, 1)[0];
+      r.ended = false;
       if (item.media) {
         commit(r, { videoId: null, videoTitle: null, media: item.media, position: 0, isPlaying: true });
         pushSystem(r, `${conn.name} saltó a ${item.media.name ?? item.title ?? 'archivo'}`);
@@ -403,6 +511,39 @@ function handle(conn: Conn, msg: ClientToServer): void {
       return;
     }
   }
+}
+
+const CONTROL_INTENTS = new Set<string>([
+  'load',
+  'load-media',
+  'play',
+  'pause',
+  'seek',
+  'queue-add',
+  'queue-add-media',
+  'queue-remove',
+  'queue-jump',
+]);
+
+/** Hand the host role to the longest-present participant once the host is gone for good. */
+function checkHost(r: Room): void {
+  if (r.participants.size === 0) return;
+  const present = [...r.participants.values()];
+  if (present.some((c) => c.clientId === r.hostClient)) {
+    r.hostAwaySince = null;
+    return;
+  }
+  if (r.hostAwaySince === null) {
+    r.hostAwaySince = now();
+    return;
+  }
+  if (now() - r.hostAwaySince < HOST_GRACE_MS) return;
+  const heir = present.reduce((a, b) => (b.joinedAt < a.joinedAt ? b : a));
+  r.hostClient = heir.clientId;
+  r.hostAwaySince = null;
+  r.controllers.delete(heir.clientId);
+  pushSystem(r, `${heir.name} ahora es anfitrión de la sala`);
+  emitParticipants(r);
 }
 
 // -------------------------------------------------------------------- WS
@@ -425,6 +566,11 @@ const server = http.createServer((req, res) => {
         })),
       }),
     );
+    return;
+  }
+
+  if (url.pathname === '/api/youtube/search') {
+    void serveYouTubeSearch(url, res);
     return;
   }
 
@@ -455,13 +601,17 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 });
 
 wss.on('connection', (ws) => {
+  const id = randomUUID().slice(0, 8);
   const conn: Conn = {
-    id: randomUUID().slice(0, 8),
+    id,
+    clientId: id,
     ws,
     name: 'Invitado',
     room: null,
     alive: true,
     chatTimes: [],
+    joinedAt: now(),
+    lastRequestAt: 0,
   };
   conns.add(conn);
 
@@ -516,6 +666,10 @@ setInterval(() => {
     if (r.participants.size > 0) emitState(r);
   }
 }, 5000);
+
+setInterval(() => {
+  for (const r of rooms.values()) checkHost(r);
+}, 10_000);
 
 // Clean up empty rooms.
 setInterval(() => {
@@ -592,6 +746,131 @@ async function serveGiphy(url: URL, res: http.ServerResponse): Promise<void> {
     res.writeHead(502);
     res.end(JSON.stringify({ error: 'GIPHY_UNREACHABLE' }));
   }
+}
+
+// ---------------------------------------------------------- youtube search
+
+const ytCache = new Map<string, { at: number; items: SearchResult[] }>();
+const YT_TTL = 15 * 60_000;
+
+type YTText = { simpleText?: string; runs?: { text?: string }[] };
+const ytText = (t: YTText | undefined): string | undefined =>
+  t?.simpleText ?? (t?.runs ? t.runs.map((x) => x.text ?? '').join('') : undefined);
+
+/** Keyless search: read the results page's embedded data (videos filter). */
+async function scrapeYouTube(q: string): Promise<SearchResult[]> {
+  const r = await fetch(
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%253D%253D&hl=es`,
+    {
+      headers: {
+        'accept-language': 'es-ES,es;q=0.9,en;q=0.6',
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+        cookie: 'SOCS=CAI', // skip the EU consent interstitial
+      },
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (!r.ok) throw new Error(`YT_HTTP_${r.status}`);
+  const html = await r.text();
+  const m = html.match(/var ytInitialData = (\{.*?\});<\/script>/s);
+  if (!m) throw new Error('YT_NO_DATA');
+  const data = JSON.parse(m[1]) as unknown;
+
+  const found: Record<string, unknown>[] = [];
+  const walk = (o: unknown, depth: number): void => {
+    if (!o || typeof o !== 'object' || depth > 40 || found.length >= 30) return;
+    const rec = o as Record<string, unknown>;
+    if (rec.videoRenderer && typeof rec.videoRenderer === 'object') {
+      found.push(rec.videoRenderer as Record<string, unknown>);
+      return;
+    }
+    for (const k in rec) walk(rec[k], depth + 1);
+  };
+  walk(data, 0);
+
+  const items: SearchResult[] = [];
+  for (const v of found) {
+    const videoId = normVideoId(v.videoId);
+    const title = ytText(v.title as YTText);
+    if (!videoId || !title) continue;
+    items.push({
+      videoId,
+      title: title.slice(0, 200),
+      channel: ytText(v.ownerText as YTText),
+      duration: ytText(v.lengthText as YTText),
+      views: ytText(v.shortViewCountText as YTText) ?? ytText(v.viewCountText as YTText),
+      published: ytText(v.publishedTimeText as YTText),
+    });
+  }
+  return items;
+}
+
+/** Keyed fallback through the YouTube Data API (100 quota units per search). */
+async function apiYouTube(q: string, key: string): Promise<SearchResult[]> {
+  const qs = new URLSearchParams({
+    part: 'snippet',
+    type: 'video',
+    maxResults: '20',
+    videoEmbeddable: 'true',
+    safeSearch: 'moderate',
+    relevanceLanguage: 'es',
+    q,
+    key,
+  });
+  const r = await fetch(`https://www.googleapis.com/youtube/v3/search?${qs}`, {
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!r.ok) throw new Error(`YT_API_${r.status}`);
+  const j = (await r.json()) as {
+    items?: { id?: { videoId?: string }; snippet?: { title?: string; channelTitle?: string } }[];
+  };
+  const entities: Record<string, string> = { amp: '&', quot: '"', '#39': "'", lt: '<', gt: '>' };
+  const decode = (t: string) => t.replace(/&(amp|quot|#39|lt|gt);/g, (all, e: string) => entities[e] ?? all);
+  return (j.items ?? []).flatMap((it) => {
+    const videoId = normVideoId(it.id?.videoId);
+    const title = it.snippet?.title;
+    return videoId && title ? [{ videoId, title: decode(title), channel: it.snippet?.channelTitle }] : [];
+  });
+}
+
+async function serveYouTubeSearch(url: URL, res: http.ServerResponse): Promise<void> {
+  const q = (url.searchParams.get('q') ?? '').trim().slice(0, 100);
+  if (!q) {
+    json(res, 400, { error: 'EMPTY_QUERY' });
+    return;
+  }
+  const cacheKey = q.toLowerCase();
+  const cached = ytCache.get(cacheKey);
+  if (cached && now() - cached.at < YT_TTL) {
+    json(res, 200, { items: cached.items });
+    return;
+  }
+
+  let items: SearchResult[] | null = null;
+  try {
+    items = await scrapeYouTube(q);
+  } catch (err) {
+    console.warn('youtube scrape failed:', (err as Error).message);
+  }
+  const key = process.env.YOUTUBE_API_KEY;
+  if ((!items || items.length === 0) && key) {
+    try {
+      items = await apiYouTube(q, key);
+    } catch (err) {
+      console.warn('youtube api failed:', (err as Error).message);
+    }
+  }
+  if (!items) {
+    json(res, 502, { error: 'YOUTUBE_UNREACHABLE' });
+    return;
+  }
+  ytCache.set(cacheKey, { at: now(), items });
+  if (ytCache.size > 500) {
+    const oldest = ytCache.keys().next().value;
+    if (oldest !== undefined) ytCache.delete(oldest);
+  }
+  json(res, 200, { items });
 }
 
 // ------------------------------------------------------------------ drive

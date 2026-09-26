@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "playsync-api",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx", "watch", "server/index.ts"],
+      "env": { "PORT": "3011" },
+      "port": 3011,
+      "autoPort": false
+    },
+    {
+      "name": "playsync-web",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "5180", "--strictPort"],
+      "env": { "API_PORT": "3011" },
+      "port": 5180,
+      "autoPort": false
+    }
+  ]
+}

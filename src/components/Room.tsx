@@ -3,7 +3,7 @@ import type { Participant } from '../../shared/protocol';
 import { useRoom } from '../hooks/useRoom';
 import { avatarColor, getLS, initials, setLS } from '../lib/util';
 import ChatPanel from './ChatPanel';
-import { IconBack, IconChat, IconFilm, IconShare, IconUsers, Logo } from './icons';
+import { IconBack, IconChat, IconCrown, IconFilm, IconHand, IconShare, IconUsers, IconX, Logo } from './icons';
 import PeoplePanel from './PeoplePanel';
 import Player from './Player';
 import QueuePanel from './QueuePanel';
@@ -150,7 +150,18 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
 
       <main className="room-body">
         <section className="stage">
-          <Player sync={room.sync} state={room.state} onOpenQueue={() => setTab('queue')} />
+          <Player
+            sync={room.sync}
+            state={room.state}
+            canControl={room.canControl}
+            floaters={room.floaters}
+            onLoad={(videoId, title) => room.actions.load(videoId, title, true)}
+            onQueueAdd={(videoId, title) => {
+              room.actions.queueAdd(videoId, title);
+              room.showToast('Añadido a la cola');
+            }}
+            onRequestControl={room.actions.requestControl}
+          />
         </section>
 
         <aside className="side">
@@ -172,6 +183,8 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
                 onAddMedia={room.actions.queueAddMedia}
                 onRemove={room.actions.queueRemove}
                 onJump={room.actions.queueJump}
+                canControl={room.canControl}
+                onRequestControl={room.actions.requestControl}
               />
             </div>
             <div className={`panel ${tab === 'people' ? '' : 'hidden'}`}>
@@ -182,6 +195,11 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
                 name={room.name}
                 onRename={room.actions.rename}
                 onInvite={() => void share()}
+                myRole={room.myRole}
+                openControl={!!room.state?.openControl}
+                onGrant={room.actions.grant}
+                onSetOpenControl={room.actions.setOpenControl}
+                onRequestControl={room.actions.requestControl}
               />
             </div>
           </div>
@@ -189,6 +207,27 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
       </main>
 
       {tabButtons('tabbar')}
+
+      {room.requests.length > 0 && (
+        <div className="requests" role="alert">
+          {room.requests.map((r) => (
+            <div key={r.id} className="request">
+              <span className="request-icon" aria-hidden="true">
+                <IconHand />
+              </span>
+              <span className="request-text">
+                <b>{r.name}</b> pide el control del video
+              </span>
+              <button className="btn primary small" onClick={() => room.actions.grant(r.id, true)}>
+                Dar control
+              </button>
+              <button className="icon-btn" onClick={() => room.dismissRequest(r.id)} aria-label="Ignorar">
+                <IconX />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {room.toast && (
         <div className="toast" role="status" key={room.toast.id}>
@@ -226,6 +265,11 @@ function Couch({ people, meId, onOpen }: { people: Participant[]; meId: string; 
           style={{ background: avatarColor(p.name) }}
         >
           {initials(p.name)}
+          {p.role === 'host' && (
+            <span className="crown" title="Anfitrión">
+              <IconCrown size={9} />
+            </span>
+          )}
         </span>
       ))}
       {extra > 0 && <span className="avatar more">+{extra}</span>}

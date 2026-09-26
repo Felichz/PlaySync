@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { DriveMedia, VideoItem } from '../../shared/protocol';
 import { fetchTitle, fmtBytes, parseDriveFileId, parseVideoId } from '../lib/util';
-import { IconDrive, IconFilm, IconLink, IconPlay, IconPlus, IconX } from './icons';
+import { IconDrive, IconFilm, IconLink, IconLock, IconPlay, IconPlus, IconX } from './icons';
 
 type Props = {
   queue: VideoItem[];
@@ -10,6 +10,8 @@ type Props = {
   onAddMedia(media: DriveMedia): void;
   onRemove(i: number): void;
   onJump(i: number): void;
+  canControl: boolean;
+  onRequestControl(): void;
 };
 
 const DRIVE_ERRORS: Record<string, string> = {
@@ -19,7 +21,16 @@ const DRIVE_ERRORS: Record<string, string> = {
   MEDIA_UNREACHABLE: 'No se pudo contactar a Google Drive. Intenta de nuevo.',
 };
 
-export default function QueuePanel({ queue, currentVideoId, onAdd, onAddMedia, onRemove, onJump }: Props) {
+export default function QueuePanel({
+  queue,
+  currentVideoId,
+  onAdd,
+  onAddMedia,
+  onRemove,
+  onJump,
+  canControl,
+  onRequestControl,
+}: Props) {
   const [input, setInput] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,36 +78,47 @@ export default function QueuePanel({ queue, currentVideoId, onAdd, onAddMedia, o
 
   return (
     <div className="queue">
-      <form
-        className="add-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void add();
-        }}
-      >
-        <div className={`add-field ${err ? 'has-error' : ''}`}>
-          <IconLink size={16} />
-          <input
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              if (err) setErr(null);
-            }}
-            placeholder="Enlace de YouTube o Drive"
-            inputMode="url"
-            aria-label="Enlace de YouTube o Google Drive"
-          />
-          <button className="btn primary" disabled={busy || !input.trim()}>
-            {busy ? <span className="spinner" aria-label="Añadiendo" /> : <IconPlus size={16} />}
-            <span>Añadir</span>
+      {!canControl && (
+        <div className="locked-note">
+          <IconLock size={15} />
+          <span>Solo quien tiene el control puede cambiar la cola.</span>
+          <button className="btn soft small" onClick={onRequestControl}>
+            Pedir
           </button>
         </div>
-        {err && (
-          <p className="form-error" role="alert">
-            {err}
-          </p>
-        )}
-      </form>
+      )}
+      {canControl && (
+        <form
+          className="add-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void add();
+          }}
+        >
+          <div className={`add-field ${err ? 'has-error' : ''}`}>
+            <IconLink size={16} />
+            <input
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                if (err) setErr(null);
+              }}
+              placeholder="Enlace de YouTube o Drive"
+              inputMode="url"
+              aria-label="Enlace de YouTube o Google Drive"
+            />
+            <button className="btn primary" disabled={busy || !input.trim()}>
+              {busy ? <span className="spinner" aria-label="Añadiendo" /> : <IconPlus size={16} />}
+              <span>Añadir</span>
+            </button>
+          </div>
+          {err && (
+            <p className="form-error" role="alert">
+              {err}
+            </p>
+          )}
+        </form>
+      )}
 
       <div className="panel-head">
         <h2>A continuación</h2>
@@ -139,14 +161,16 @@ export default function QueuePanel({ queue, currentVideoId, onAdd, onAddMedia, o
                   : `Añadido por ${item.addedBy ?? '?'}`}
               </span>
             </div>
-            <div className="queue-actions">
-              <button className="icon-btn" onClick={() => onJump(i)} aria-label="Reproducir ahora" title="Reproducir ahora">
-                <IconPlay size={14} />
-              </button>
-              <button className="icon-btn" onClick={() => onRemove(i)} aria-label="Quitar de la cola" title="Quitar">
-                <IconX />
-              </button>
-            </div>
+            {canControl && (
+              <div className="queue-actions">
+                <button className="icon-btn" onClick={() => onJump(i)} aria-label="Reproducir ahora" title="Reproducir ahora">
+                  <IconPlay size={14} />
+                </button>
+                <button className="icon-btn" onClick={() => onRemove(i)} aria-label="Quitar de la cola" title="Quitar">
+                  <IconX />
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>

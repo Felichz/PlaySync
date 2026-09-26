@@ -13,5 +13,7 @@ services:
         value: "20"
       - key: GIPHY_API_KEY
         sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
       - key: MAX_MEDIA_MB
         value: "500"

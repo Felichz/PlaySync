@@ -143,3 +143,13 @@ export function fmtBytes(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
+
+/** Stable per-browser id so the server recognises the host across reloads. */
+export function getClientId(): string {
+  let id = getLS('playsync.client');
+  if (!/^[\w-]{8,64}$/.test(id)) {
+    id = randomCode(16);
+    setLS('playsync.client', id);
+  }
+  return id;
+}

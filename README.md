@@ -4,10 +4,19 @@ A synchronized YouTube watch party, with no accounts, for every platform: it run
 
 ## Features
 
-- 🎬 **Real sync**: the server is the source of truth. Anyone's play, pause and seek propagate to everyone; each client estimates the server clock (NTP-lite over the WebSocket) and automatically corrects drift over 1.5 s. It resyncs when the tab regains focus or the connection drops.
+- 🎬 **Real sync**: the server is the source of truth. Play, pause and seek propagate to everyone; each client estimates the server clock (NTP-lite over the WebSocket) and automatically corrects drift over 1.5 s. It resyncs when the tab regains focus or the connection drops.
 - 💬 **Real-time chat** with system messages (join/leave/now playing), an emoji picker with per-user recents (WhatsApp-style), and GIFs/stickers via Giphy with search and your recently sent items.
 - 📋 **Video queue**: paste YouTube links (`watch`, `youtu.be`, `shorts`, `live`…); they play in order and the room auto-advances when a video ends.
 - 👥 **Code-based rooms** with a shareable link (`#/r/CODE`), no sign-up.
+- 👑 **Permissions**: whoever opens the room hosts it. The host grants or revokes control
+  (play/pause/seek and the queue) per person, or lets everyone control. Viewers can ask for
+  control and the host gets a one-tap prompt. The server enforces every intent; the host role
+  survives reloads (a per-browser id) and passes to the longest-present person if the host is
+  gone for over a minute.
+- 🔎 **YouTube search**: for people with control, the player turns into a search screen when
+  nothing is playing, when the last video ended, or when a video refuses to be embedded.
+- 🎉 **Floating reactions**: GIFs, stickers and emoji-only messages float over the video for
+  everyone, fullscreen included.
 - 📱 **Installable PWA** on Android, iPhone (Add to Home Screen) and desktop, with manifest, auto-updating service worker and generated icons.
 - 🎨 Responsive layout: bottom tab bar on mobile, side panel on desktop.
 - ⏯ Custom controls (YouTube's own chrome is hidden): play/pause, seek bar, volume, mute and fullscreen. A "tap to play" overlay appears whenever the OS blocks autoplay with sound (iOS).
@@ -22,7 +31,7 @@ A synchronized YouTube watch party, with no accounts, for every platform: it run
 ```bash
 npm install
 npm run icons      # once: generates public/icons/*.png (requires sharp)
-npm run dev        # server on :3001 + vite on :5173 (/ws proxy included)
+npm run dev        # server on :3001 + vite on :5173 (/ws proxy included; API_PORT changes the proxy target)
 ```
 
 Open http://localhost:5173.
@@ -37,7 +46,7 @@ npm start          # serves everything at http://localhost:3001 (set PORT to cha
 Protocol smoke test (with the server running in another terminal):
 
 ```bash
-npm run smoke      # 10 checks: join, chat, play/pause/seek, queue, clock, etc.
+npm run smoke      # join, chat, play/pause/seek, queue, clock, ended state, permissions…
 ```
 
 ## Enabling GIFs and stickers (Giphy)
@@ -52,6 +61,12 @@ server-side; the client talks to `/api/giphy/*` on your own server (cached ~10 m
 Without the key, everything else works — the GIF/sticker tabs just show setup instructions.
 Only `https://*.giphy.com` media URLs are accepted by the server, so the chat can't be used to
 embed arbitrary images.
+
+## YouTube search
+
+`/api/youtube/search?q=` reads YouTube's own results page (no key needed, cached 15 min per
+query). If that ever fails, set `YOUTUBE_API_KEY` (YouTube Data API v3) and the server falls
+back to the official API (100 quota units per search, 10,000/day free).
 
 ## Playing files from Google Drive
 

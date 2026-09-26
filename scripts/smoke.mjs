@@ -122,6 +122,38 @@ try {
   const stNext = await b.wait((m) => m.type === 'state' && m.state.videoId === 'M7lc1UVf-VE', 'queue advance');
   check('ended advances the queue', stNext.state.isPlaying === true && stNext.state.queue.length === 0);
 
+  await sleep(3100); // the server debounces consecutive 'ended' reports
+  a.send({ type: 'ended' });
+  const stEnd = await b.wait((m) => m.type === 'state' && m.state.ended === true, 'ended flag');
+  check('ended with an empty queue flags the room', stEnd.state.isPlaying === false);
+
+  // Permissions: Ana opened the room, so she hosts; Beto only watches.
+  const parts = await a.wait(
+    (m) => m.type === 'participants' && m.participants.some((p) => p.name === 'Beto'),
+    'roles',
+  );
+  const roles = Object.fromEntries(parts.participants.map((p) => [p.name, p.role]));
+  check('creator hosts, joiner watches', roles.Ana === 'host' && roles.Beto === 'viewer', JSON.stringify(roles));
+
+  b.msgs.length = 0;
+  b.send({ type: 'play' });
+  const denied = await b.wait((m) => m.type === 'error' && m.code === 'forbidden', 'forbidden');
+  check('viewer cannot drive playback', !!denied);
+
+  b.send({ type: 'request-control' });
+  const req = await a.wait((m) => m.type === 'control-request', 'control request');
+  check('host hears the request', req.name === 'Beto');
+
+  a.send({ type: 'grant', id: req.id, control: true });
+  await b.wait(
+    (m) => m.type === 'participants' && m.participants.some((p) => p.name === 'Beto' && p.role === 'control'),
+    'grant',
+  );
+  b.msgs.length = 0;
+  b.send({ type: 'play' });
+  const replay = await b.wait((m) => m.type === 'state' && m.state.isPlaying === true, 'play after grant');
+  check('granted viewer can play (restarts after the end)', replay.state.ended === false && replay.state.position < 1);
+
   b.ws.close();
   a.ws.close();
   await sleep(200);
