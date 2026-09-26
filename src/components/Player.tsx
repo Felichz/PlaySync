@@ -334,6 +334,21 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
     syncRef.current?.send({ type: 'play' });
     clearBlocked();
     if (mediaRef.current) {
+      // Resuming after a background pause: catch up to the live position now.
+      const v = videoRef.current;
+      const s = stateRef.current;
+      const client = syncRef.current;
+      if (v && s && client) {
+        const target = effectivePosition(s, client.serverNow());
+        if (Math.abs(target - v.currentTime) > 2) {
+          try {
+            v.currentTime = Math.max(0, target);
+          } catch {
+            /* metadata not loaded */
+          }
+          setCur(Math.max(0, target));
+        }
+      }
       videoRef.current?.play().catch(() => setBlocked(true));
       return;
     }
