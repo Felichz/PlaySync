@@ -3,7 +3,7 @@ import type { RoomState } from '../../shared/protocol';
 import { effectivePosition, type SyncClient } from '../lib/sync';
 import { loadYT, YT_STATE, type YTPlayer } from '../lib/yt';
 import { fmtBytes, fmtTime, getLS, setLS } from '../lib/util';
-import { IconFilm, IconFull, IconMute, IconPause, IconPlay, IconVolume } from './icons';
+import { IconDrive, IconFull, IconMute, IconPause, IconPlay, IconPlus, IconVolume } from './icons';
 
 type Props = {
   sync: SyncClient | null;
@@ -463,8 +463,11 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
     }
   };
 
+  const title = state?.media ? state.media.name : state?.videoTitle;
+  const volPct = muted ? 0 : vol;
+
   return (
-    <div className={`player ${frozen ? 'is-paused' : ''}`} ref={wrapRef}>
+    <div className={`player ${frozen ? 'is-paused' : ''} ${playing ? 'is-playing' : ''}`} ref={wrapRef}>
       <div className="player-frame">
         <div ref={hostRef} className="yt-host" style={hasMedia ? { display: 'none' } : undefined} />
 
@@ -502,44 +505,58 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
           />
         )}
 
-        {hasVideo && !hasMedia && !ready && <div className="player-empty">…</div>}
+        {hasVideo && !hasMedia && !ready && (
+          <div className="player-empty loading">
+            <span className="spinner lg" aria-label="Cargando" />
+          </div>
+        )}
 
-        {hasMedia && !ready && !error && <div className="player-empty">Cargando archivo…</div>}
+        {hasMedia && !ready && !error && (
+          <div className="player-empty loading">
+            <span className="spinner lg" aria-hidden="true" />
+            <p>Preparando el archivo…</p>
+          </div>
+        )}
 
         {!hasVideo && !hasMedia && (
-          <div className="player-empty">
-            <span className="glyph">
-              <IconFilm size={22} />
+          <div className="player-empty idle">
+            <span className="idle-mark" aria-hidden="true">
+              <IconPlay size={26} />
             </span>
-            <p>Nada en reproducción todavía</p>
+            <h2>La pantalla está lista</h2>
+            <p>Pega un enlace de YouTube o Google Drive en la cola y empieza para todos a la vez.</p>
             <button className="btn primary" onClick={onOpenQueue}>
-              Añadir un video
+              <IconPlus size={16} />
+              Elegir un video
             </button>
           </div>
         )}
 
         {cued && (
           <button className="player-overlay" onClick={userPlay} aria-label="Reproducir">
-            {(state?.videoTitle || state?.media?.name) && (
-              <span className="cue-title">{state.videoTitle ?? state.media?.name}</span>
-            )}
             <span className="big-play">
-              <IconPlay size={26} />
+              <IconPlay size={28} />
             </span>
-            <span className="cue-hint">Toca para reproducir</span>
+            {title && <span className="cue-title">{title}</span>}
+            <span className="cue-hint">Empieza para todos a la vez</span>
           </button>
         )}
 
         {blocked && (
           <button className="player-overlay" onClick={activateFromOverlay}>
             <span className="big-play">
-              <IconPlay size={26} />
+              <IconPlay size={28} />
             </span>
-            <span className="cue-hint">Toca para reproducir con sonido</span>
+            <span className="cue-title">La sala ya está viendo</span>
+            <span className="cue-hint">Toca para unirte con sonido</span>
           </button>
         )}
 
-        {error && <div className="player-error">{error}</div>}
+        {error && (
+          <div className="player-error" role="alert">
+            {error}
+          </div>
+        )}
       </div>
 
       <div className="controls">
@@ -549,59 +566,67 @@ export default function Player({ sync, state, onOpenQueue }: Props) {
           disabled={!hasSomething()}
           aria-label={playing ? 'Pausar' : 'Reproducir'}
         >
-          {playing ? <IconPause size={17} /> : <IconPlay size={17} />}
+          {playing ? <IconPause size={18} /> : <IconPlay size={18} />}
         </button>
-        <span className="time">{fmtTime(scrub ?? cur)}</span>
-        <input
-          className="seek"
-          type="range"
-          min={0}
-          max={max}
-          step={0.1}
-          value={sliderValue}
-          disabled={!hasSomething()}
-          style={{
-            ['--track' as string]: `linear-gradient(to right, var(--accent) ${fillPct}%, var(--bg3) ${fillPct}%)`,
-          }}
-          onPointerDown={() => setScrub(cur)}
-          onChange={(e) => setScrub(Number(e.target.value))}
-          onPointerUp={commitScrub}
-          onTouchEnd={commitScrub}
-          aria-label="Progreso del video"
-        />
-        <span className="time">{fmtTime(dur)}</span>
-        <button className="icon-btn" onClick={toggleMute} aria-label="Silenciar">
-          {muted || vol === 0 ? <IconMute /> : <IconVolume />}
-        </button>
-        <input
-          className="vol"
-          type="range"
-          min={0}
-          max={100}
-          value={vol}
-          onChange={(e) => changeVolume(Number(e.target.value))}
-          aria-label="Volumen"
-        />
+        <div className="scrub">
+          <span className="time">{fmtTime(scrub ?? cur)}</span>
+          <input
+            className="seek"
+            type="range"
+            min={0}
+            max={max}
+            step={0.1}
+            value={sliderValue}
+            disabled={!hasSomething()}
+            style={{ ['--fill' as string]: `${fillPct}%` }}
+            onPointerDown={() => setScrub(cur)}
+            onChange={(e) => setScrub(Number(e.target.value))}
+            onPointerUp={commitScrub}
+            onTouchEnd={commitScrub}
+            aria-label="Progreso del video"
+          />
+          <span className="time end">{fmtTime(dur)}</span>
+        </div>
+        <div className="vol-group">
+          <button className="icon-btn" onClick={toggleMute} aria-label={muted ? 'Activar sonido' : 'Silenciar'}>
+            {muted || vol === 0 ? <IconMute /> : <IconVolume />}
+          </button>
+          <input
+            className="vol"
+            type="range"
+            min={0}
+            max={100}
+            value={vol}
+            style={{ ['--fill' as string]: `${volPct}%` }}
+            onChange={(e) => changeVolume(Number(e.target.value))}
+            aria-label="Volumen"
+          />
+        </div>
         <button className="icon-btn" onClick={toggleFullscreen} aria-label="Pantalla completa">
           <IconFull />
         </button>
       </div>
 
-      {hasVideo && state?.videoTitle && (
+      {title && (
         <div className="now-playing">
-          <span className="title">
-            <strong>{state.videoTitle}</strong>
+          <span className="np-source">
+            {hasMedia ? <IconDrive size={14} /> : <IconYouTube />}
+            {hasMedia ? `Google Drive${state?.media?.size ? ` · ${fmtBytes(state.media.size)}` : ''}` : 'YouTube'}
           </span>
-        </div>
-      )}
-      {hasMedia && state?.media?.name && (
-        <div className="now-playing">
-          <span className="title">
-            <strong>{state.media.name}</strong>
-            {state.media.size ? ` · ${fmtBytes(state.media.size)}` : ''}
-          </span>
+          <h1 className="np-title" title={title}>
+            {title}
+          </h1>
         </div>
       )}
     </div>
+  );
+}
+
+function IconYouTube() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2.5" y="5.5" width="19" height="13" rx="4" fill="currentColor" />
+      <path d="M10.2 9.2v5.6l4.8-2.8-4.8-2.8Z" fill="var(--ground)" />
+    </svg>
   );
 }

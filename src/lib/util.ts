@@ -19,10 +19,25 @@ export function fmtTime(t: number): string {
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-export function colorFor(name: string): string {
+function hueFor(name: string): number {
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return `hsl(${h} 65% 62%)`;
+  return h;
+}
+
+/** Per-person text color, soft enough to read on the night ground. */
+export function colorFor(name: string): string {
+  return `hsl(${hueFor(name)} 78% 76%)`;
+}
+
+/** Per-person avatar fill (paired with dark initials). */
+export function avatarColor(name: string): string {
+  return `hsl(${hueFor(name)} 62% 70%)`;
+}
+
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
 
 /** Extracts the video id from YouTube URLs or a bare id. */
