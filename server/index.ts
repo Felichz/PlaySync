@@ -412,7 +412,19 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/api/health') {
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
+    res.end(
+      JSON.stringify({
+        ok: true,
+        rooms: [...rooms.values()].map((r) => ({
+          id: r.id,
+          videoId: r.videoId,
+          media: r.media?.fileId ?? null,
+          playing: r.isPlaying,
+          pos: Math.round(r.position),
+          viewers: r.participants.size,
+        })),
+      }),
+    );
     return;
   }
 
@@ -735,9 +747,16 @@ async function serveMedia(
 
     const headers: Record<string, string> = {};
     if (req.headers.range) headers.Range = req.headers.range;
-    const up = await fetch(info.url, { headers, redirect: 'follow' });
+
+    // First attempt uses the cached direct URL; on failure re-resolve once
+    // (Google's URLs are time-limited).
+    let up = await fetch(info.url, { headers, redirect: 'follow' }).catch(() => null);
+    if (!up || !up.ok) {
+      mediaCache.delete(fileId);
+      const fresh = await resolveDrive(fileId);
+      up = await fetch(fresh.url, { headers, redirect: 'follow' });
+    }
     if (!up.ok || !up.body) {
-      mediaCache.delete(fileId); // cached URL may have expired
       json(res, 502, { error: 'MEDIA_UPSTREAM_ERROR', status: up.status });
       return;
     }
@@ -753,12 +772,36 @@ async function serveMedia(
     if (cr) out['content-range'] = cr;
     res.writeHead(up.status === 206 ? 206 : 200, out);
 
+    // Seeking aborts the previous range request and Google may reset the
+    // stream: neither may crash the server.
     const { Readable } = await import('node:stream');
-    const stream = Readable.fromWeb(up.body as import('node:stream/web').ReadableStream);
-    req.on('close', () => {
-      stream.destroy();
+    const upstream = Readable.fromWeb(up.body as import('node:stream/web').ReadableStream);
+    upstream.on('error', (err) => {
+      res.destroy();
+      if ((err as Error & { code?: string })?.code !== 'ECONNRESET') {
+        console.error('media stream error', err);
+      }
     });
-    stream.pipe(res);
+    res.on('close', () => {
+      upstream.destroy();
+    });
+
+    // Stall watchdog: if Google stops sending mid-video, kill the connection
+    // so the browser re-requests the range instead of hanging forever.
+    let lastData = Date.now();
+    upstream.on('data', () => {
+      lastData = Date.now();
+    });
+    const watchdog = setInterval(() => {
+      if (now() - lastData > 12_000) {
+        upstream.destroy();
+        res.destroy();
+      }
+    }, 3_000);
+    upstream.on('close', () => clearInterval(watchdog));
+    res.on('close', () => clearInterval(watchdog));
+
+    upstream.pipe(res);
   } catch (err) {
     if (err instanceof MediaError) json(res, err.status, { error: err.code });
     else {

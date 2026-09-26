@@ -75,8 +75,11 @@ export class SyncClient {
       if (msg.type === 'pong') {
         const t2 = Date.now();
         const rtt = t2 - msg.t0;
-        // offset ≈ t1 - (t0 + rtt/2)
-        this.offset = msg.t1 - (msg.t0 + rtt / 2);
+        // A throttled background tab can process a pong minutes late, which
+        // would poison the offset; only trust fresh samples.
+        if (rtt >= 0 && rtt < 5_000) {
+          this.offset = msg.t1 - (msg.t0 + rtt / 2);
+        }
         return;
       }
       this.onMessage?.(msg);
@@ -121,7 +124,8 @@ export class SyncClient {
 
 /** Playback position extrapolated onto the server clock. */
 export function effectivePosition(s: RoomState, serverNow: number): number {
-  if (!s.videoId) return 0;
+  const hasSource = !!s.videoId || !!s.media;
+  if (!hasSource) return 0;
   const p = s.isPlaying ? s.position + (serverNow - s.lastUpdatedAt) / 1000 : s.position;
   return Math.max(0, p);
 }
