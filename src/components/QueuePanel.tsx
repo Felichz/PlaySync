@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { DriveMedia, VideoItem } from '../../shared/protocol';
 import { fetchTitle, fmtBytes, parseDriveFileId, parseVideoId } from '../lib/util';
-import { IconFilm, IconPlay, IconPlus, IconX } from './icons';
+import { IconDrive, IconFilm, IconLink, IconPlay, IconPlus, IconX } from './icons';
 
 type Props = {
   queue: VideoItem[];
@@ -74,53 +74,79 @@ export default function QueuePanel({ queue, currentVideoId, onAdd, onAddMedia, o
           void add();
         }}
       >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Enlace de YouTube o Google Drive…"
-          inputMode="url"
-          aria-label="Enlace de YouTube o Google Drive"
-        />
-        <button className="btn primary" disabled={busy || !input.trim()}>
-          {busy ? '…' : <IconPlus size={16} />}
-          {busy ? '' : 'Añadir'}
-        </button>
+        <div className={`add-field ${err ? 'has-error' : ''}`}>
+          <IconLink size={16} />
+          <input
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              if (err) setErr(null);
+            }}
+            placeholder="Enlace de YouTube o Drive"
+            inputMode="url"
+            aria-label="Enlace de YouTube o Google Drive"
+          />
+          <button className="btn primary" disabled={busy || !input.trim()}>
+            {busy ? <span className="spinner" aria-label="Añadiendo" /> : <IconPlus size={16} />}
+            <span>Añadir</span>
+          </button>
+        </div>
+        {err && (
+          <p className="form-error" role="alert">
+            {err}
+          </p>
+        )}
       </form>
-      {err && <p className="form-error">{err}</p>}
+
+      <div className="panel-head">
+        <h2>A continuación</h2>
+        {queue.length > 0 && <span className="panel-count">{queue.length}</span>}
+      </div>
 
       <ul className="queue-list">
         {queue.length === 0 && (
-          <p className="hint">
-            La cola está vacía. Añade enlaces de YouTube o archivos públicos de Google Drive
-            (límite 500 MB).
-          </p>
+          <li className="empty">
+            <span className="empty-art" aria-hidden="true">
+              <IconFilm size={22} />
+            </span>
+            <strong>La cola está vacía</strong>
+            <span>
+              Añade videos de YouTube o archivos públicos de Google Drive (hasta 500 MB). Se reproducen solos, uno tras
+              otro.
+            </span>
+          </li>
         )}
         {queue.map((item, i) => (
           <li
             key={`${item.videoId ?? item.media?.fileId}-${i}`}
             className={`queue-item ${item.videoId && item.videoId === currentVideoId ? 'current' : ''}`}
           >
-            {item.media ? (
-              <span className="queue-thumb file" aria-hidden="true">
-                <IconFilm size={18} />
-              </span>
-            ) : (
-              <img src={`https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`} alt="" loading="lazy" />
-            )}
+            <span className="queue-index">{i + 1}</span>
+            <span className="queue-thumb">
+              {item.media ? (
+                <span className="file" aria-hidden="true">
+                  <IconDrive size={20} />
+                </span>
+              ) : (
+                <img src={`https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`} alt="" loading="lazy" />
+              )}
+            </span>
             <div className="queue-info">
               <span className="queue-title">{item.media?.name ?? item.title ?? item.videoId}</span>
               <span className="queue-by">
                 {item.media
-                  ? `archivo de ${item.addedBy ?? '?'}${item.media.size ? ` · ${fmtBytes(item.media.size)}` : ''}`
-                  : `programó ${item.addedBy ?? '?'}`}
+                  ? `Drive · ${item.addedBy ?? '?'}${item.media.size ? ` · ${fmtBytes(item.media.size)}` : ''}`
+                  : `Añadido por ${item.addedBy ?? '?'}`}
               </span>
             </div>
-            <button className="icon-btn" onClick={() => onJump(i)} aria-label="Emitir ahora">
-              <IconPlay size={15} />
-            </button>
-            <button className="icon-btn" onClick={() => onRemove(i)} aria-label="Quitar de la cola">
-              <IconX />
-            </button>
+            <div className="queue-actions">
+              <button className="icon-btn" onClick={() => onJump(i)} aria-label="Reproducir ahora" title="Reproducir ahora">
+                <IconPlay size={14} />
+              </button>
+              <button className="icon-btn" onClick={() => onRemove(i)} aria-label="Quitar de la cola" title="Quitar">
+                <IconX />
+              </button>
+            </div>
           </li>
         ))}
       </ul>

@@ -1,5 +1,4 @@
-// Authored icon set for the broadcast world: one stroke weight, one geometry.
-// 24×24 viewBox, currentColor, geometric like console silkscreen labels.
+// PlaySync icon set: one soft stroke weight, rounded joins, 24×24, currentColor.
 import type { ReactNode } from 'react';
 
 type P = { size?: number; className?: string };
@@ -158,3 +157,51 @@ export const IconUsers = ({ size = 16, className }: P) =>
       <path d="M16 6.2a3 3 0 0 1 0 5.8M17.5 14.9c2 .6 3.5 2.3 3.5 4.6" />
     </>,
   );
+
+/** Brand mark: two play marks, one catching up to the other. */
+export const Logo = ({ size = 28, className }: P) => (
+  <svg width={size} height={size} viewBox="0 0 512 512" className={className} aria-hidden="true">
+    <defs>
+      <linearGradient id="ps-tile" x1="0" y1="0" x2="0.4" y2="1">
+        <stop offset="0" stopColor="#2d2032" />
+        <stop offset="1" stopColor="#140f17" />
+      </linearGradient>
+      <linearGradient id="ps-glow" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#ffc9a8" />
+        <stop offset="1" stopColor="#ff9a76" />
+      </linearGradient>
+    </defs>
+    <rect width="512" height="512" rx="120" fill="url(#ps-tile)" />
+    <path d="M168 150 L168 318 L314 234 Z" fill="none" stroke="#ff8497" strokeWidth="30" strokeLinejoin="round" opacity="0.9" />
+    <path d="M214 196 L214 364 L360 280 Z" fill="url(#ps-glow)" stroke="url(#ps-glow)" strokeWidth="30" strokeLinejoin="round" />
+  </svg>
+);
+
+export const IconArrow = ({ size = 16, className }: P) =>
+  svg(size, className, <path d="M5 12h14M13 6l6 6-6 6" />);
+
+export const IconReturn = ({ size = 15, className }: P) =>
+  svg(size, className, <path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />);
+
+export const IconLink = ({ size = 16, className }: P) =>
+  svg(
+    size,
+    className,
+    <>
+      <path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1" />
+      <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" />
+    </>,
+  );
+
+export const IconDrive = ({ size = 16, className }: P) =>
+  svg(
+    size,
+    className,
+    <>
+      <path d="M8.6 4h6.8l5.6 9.8-3.4 5.9H6.4L3 13.8 8.6 4Z" />
+      <path d="M8.6 4 14.3 13.8H21M6.4 19.7 12 10" />
+    </>,
+  );
+
+export const IconPencil = ({ size = 15, className }: P) =>
+  svg(size, className, <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4" />);

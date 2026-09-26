@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import type { Participant } from '../../shared/protocol';
 import { useRoom } from '../hooks/useRoom';
-import { getLS, setLS } from '../lib/util';
+import { avatarColor, getLS, initials, setLS } from '../lib/util';
 import ChatPanel from './ChatPanel';
-import { IconBack, IconChat, IconFilm, IconPlay, IconShare, IconUsers } from './icons';
+import { IconBack, IconChat, IconFilm, IconShare, IconUsers, Logo } from './icons';
 import PeoplePanel from './PeoplePanel';
 import Player from './Player';
 import QueuePanel from './QueuePanel';
@@ -11,7 +12,7 @@ type Tab = 'chat' | 'queue' | 'people';
 
 const STATUS_TEXT: Record<string, string> = {
   connecting: 'Conectando…',
-  online: 'En línea',
+  online: 'Conectado',
   offline: 'Reconectando…',
 };
 
@@ -50,56 +51,100 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
         await navigator.share({ title: 'PlaySync', text: `Únete a mi sala: ${code}`, url });
       } else {
         await navigator.clipboard.writeText(url);
-        room.showToast('Enlace copiado al portapapeles');
+        room.showToast('Enlace copiado. Pásaselo a quien quieras.');
       }
     } catch {
       /* cancelado por el usuario */
     }
   };
 
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      room.showToast(`Código ${code} copiado`);
+    } catch {
+      /* sin permiso de portapapeles */
+    }
+  };
+
   const live = !!room.state?.isPlaying;
+  const offline = room.status === 'offline';
 
   const tabs: { id: Tab; label: string; icon: ReactNode; badge?: number }[] = [
-    { id: 'chat', label: 'Chat', icon: <IconChat size={14} />, badge: unread || undefined },
-    { id: 'queue', label: 'Cola', icon: <IconFilm size={14} />, badge: room.state?.queue.length || undefined },
-    { id: 'people', label: 'Gente', icon: <IconUsers size={14} />, badge: room.participants.length },
+    { id: 'chat', label: 'Chat', icon: <IconChat size={16} />, badge: unread || undefined },
+    { id: 'queue', label: 'Cola', icon: <IconFilm size={16} />, badge: room.state?.queue.length || undefined },
+    { id: 'people', label: 'Gente', icon: <IconUsers size={16} />, badge: room.participants.length || undefined },
   ];
+  const tabIndex = tabs.findIndex((t) => t.id === tab);
 
   const tabButtons = (className: string) => (
-    <nav className={className} aria-label="Paneles de la sala">
+    <nav className={className} aria-label="Paneles de la sala" style={{ '--i': tabIndex } as CSSProperties}>
       {tabs.map((t) => (
-        <button key={t.id} className={`tab-btn ${t.id === tab ? 'active' : ''}`} onClick={() => setTab(t.id)}>
+        <button
+          key={t.id}
+          className={`tab-btn ${t.id === tab ? 'active' : ''}`}
+          onClick={() => setTab(t.id)}
+          aria-pressed={t.id === tab}
+        >
           {t.icon}
-          {t.label}
-          {t.badge != null && t.badge > 0 && <span className="badge">{t.badge}</span>}
+          <span>{t.label}</span>
+          {t.badge != null && t.badge > 0 && <span className={`badge ${t.id === 'chat' ? 'hot' : ''}`}>{t.badge}</span>}
         </button>
       ))}
     </nav>
   );
 
   return (
-    <div className="room">
+    <div className={`room ${live ? 'is-live' : ''}`}>
+      <Ambient videoId={room.state?.media ? null : (room.state?.videoId ?? null)} live={live} />
+
       <header className="topbar">
         <button className="icon-btn" onClick={onLeave} aria-label="Salir de la sala">
           <IconBack />
         </button>
         <span className="brand">
-          <span className="mark">
-            <IconPlay size={11} />
+          <Logo size={26} />
+          <span className="wordmark">PlaySync</span>
+        </span>
+
+        <button className="ticket" onClick={() => void copyCode()} title={`${STATUS_TEXT[room.status]} · copiar código`}>
+          <span className="ticket-stub">
+            <span className={`conn-dot ${room.status}`} />
+            Sala
           </span>
-          PlaySync
+          <span className="ticket-code">{code}</span>
+        </button>
+
+        <span className="topbar-spacer" />
+
+        <Couch people={room.participants} meId={room.me} onOpen={() => setTab('people')} />
+
+        <span className={`live-chip ${live ? 'live' : ''} ${offline ? 'offline' : ''}`} role="status">
+          {offline ? (
+            <>
+              <i className="dot" />
+              <span>Reconectando…</span>
+            </>
+          ) : live ? (
+            <>
+              <span className="eq" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span>Viendo juntos</span>
+            </>
+          ) : (
+            <>
+              <i className="dot" />
+              <span>En pausa</span>
+            </>
+          )}
         </span>
-        <span className="room-pill" title={STATUS_TEXT[room.status]}>
-          <span className={`conn-dot ${room.status}`} />
-          <span className="code">{code}</span>
-        </span>
-        <span className={`live-chip ${live ? 'live' : ''}`}>
-          <i />
-          {live ? <span>En vivo</span> : <span>En pausa</span>}
-        </span>
-        <button className="btn ghost small" onClick={() => void share()}>
-          <IconShare size={13} />
-          Compartir
+
+        <button className="btn soft small invite" onClick={() => void share()}>
+          <IconShare size={14} />
+          <span>Invitar</span>
         </button>
       </header>
 
@@ -109,10 +154,15 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
         </section>
 
         <aside className="side">
-          {tabButtons('side-tabs')}
+          {tabButtons('seg side-tabs')}
           <div className="tab-content">
             <div className={`panel ${tab === 'chat' ? '' : 'hidden'}`}>
-              <ChatPanel chat={room.chat} meId={room.me} onSend={room.actions.sendChat} onSendMedia={room.actions.sendMedia} />
+              <ChatPanel
+                chat={room.chat}
+                meId={room.me}
+                onSend={room.actions.sendChat}
+                onSendMedia={room.actions.sendMedia}
+              />
             </div>
             <div className={`panel ${tab === 'queue' ? '' : 'hidden'}`}>
               <QueuePanel
@@ -126,10 +176,12 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
             </div>
             <div className={`panel ${tab === 'people' ? '' : 'hidden'}`}>
               <PeoplePanel
+                code={code}
                 participants={room.participants}
                 meId={room.me}
                 name={room.name}
                 onRename={room.actions.rename}
+                onInvite={() => void share()}
               />
             </div>
           </div>
@@ -139,10 +191,44 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
       {tabButtons('tabbar')}
 
       {room.toast && (
-        <div className="toast" role="status">
+        <div className="toast" role="status" key={room.toast.id}>
           {room.toast.text}
         </div>
       )}
     </div>
+  );
+}
+
+/** The screen's light spilling into the room: the playing video's thumbnail, blurred wide. */
+function Ambient({ videoId, live }: { videoId: string | null; live: boolean }) {
+  return (
+    <div className={`ambient ${live ? 'live' : ''}`} aria-hidden="true">
+      <div className="ambient-base" />
+      {videoId && (
+        <img key={videoId} className="ambient-img" src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" />
+      )}
+    </div>
+  );
+}
+
+/** Who's on the couch: overlapping avatars in the top bar. */
+function Couch({ people, meId, onOpen }: { people: Participant[]; meId: string; onOpen(): void }) {
+  if (people.length === 0) return null;
+  const shown = people.slice(0, 4);
+  const extra = people.length - shown.length;
+  const label = people.length === 1 ? 'Solo tú por ahora' : `${people.length} en la sala`;
+  return (
+    <button className="couch" onClick={onOpen} title={people.map((p) => p.name).join(', ')} aria-label={label}>
+      {shown.map((p) => (
+        <span
+          key={p.id}
+          className={`avatar ${p.id === meId ? 'me' : ''}`}
+          style={{ background: avatarColor(p.name) }}
+        >
+          {initials(p.name)}
+        </span>
+      ))}
+      {extra > 0 && <span className="avatar more">+{extra}</span>}
+    </button>
   );
 }

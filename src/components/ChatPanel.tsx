@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { ChatMedia, ChatMessage } from '../../shared/protocol';
 import { addRecentEmoji, EMOJI_CATEGORIES, getRecentEmojis } from '../lib/emojis';
 import { giphyFetch, type GiphyItem } from '../lib/giphy';
-import { addRecentMedia, colorFor, getRecentMedia, isEmojiOnly } from '../lib/util';
+import { addRecentMedia, avatarColor, colorFor, getRecentMedia, initials, isEmojiOnly } from '../lib/util';
 import { IconSend, IconSmile, IconX } from './icons';
 
 type Props = {
@@ -15,6 +15,12 @@ type Props = {
 type PickerTab = 'emoji' | 'gif' | 'sticker';
 type MediaKind = 'gif' | 'sticker';
 
+const PICKER_TABS: { id: PickerTab; label: string }[] = [
+  { id: 'emoji', label: 'Emojis' },
+  { id: 'gif', label: 'GIFs' },
+  { id: 'sticker', label: 'Stickers' },
+];
+
 const hhmm = (at: number) => {
   try {
     return new Date(at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
@@ -26,6 +32,7 @@ const hhmm = (at: number) => {
 export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
   const [text, setText] = useState('');
   const [picker, setPicker] = useState<PickerTab | null>(null);
+  const [openRuns, setOpenRuns] = useState<Set<string>>(() => new Set());
   const listRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
 
@@ -56,48 +63,100 @@ export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
   return (
     <div className="chat">
       <div className="chat-list" ref={listRef} onScroll={onScroll} role="log" aria-label="Chat de la sala">
-        {chat.length === 0 && <p className="hint">Rompe el hielo 👋</p>}
-        {chat.map((m) =>
-          m.system ? (
-            <div key={m.id} className="chat-sys">
-              {m.text}
-            </div>
-          ) : (
-            <div key={m.id} className={`chat-msg ${m.from === meId ? 'mine' : ''}`}>
-              <div className="chat-head">
-                <span className="chat-name" style={{ color: colorFor(m.name) }}>
-                  {m.from === meId ? 'Tú' : m.name}
-                </span>
-                <span className="chat-at">{hhmm(m.at)}</span>
+        {chat.length === 0 && (
+          <div className="chat-empty">
+            <span className="chat-empty-art" aria-hidden="true">
+              👋
+            </span>
+            <strong>Rompe el hielo</strong>
+            <span>Lo que escribas aquí lo ve todo el mundo en la sala, en vivo.</span>
+          </div>
+        )}
+        {chat.map((m, i) => {
+          if (m.system) {
+            // Runs of join/leave notices collapse to the latest one plus a counter.
+            let start = i;
+            while (start > 0 && chat[start - 1].system) start--;
+            let end = i;
+            while (end < chat.length - 1 && chat[end + 1].system) end++;
+            const runId = chat[start].id;
+            const hidden = end - start;
+            if (hidden >= 2 && !openRuns.has(runId) && i !== end) return null;
+            return (
+              <div key={m.id} className="chat-sys">
+                {hidden >= 2 && i === end && !openRuns.has(runId) && (
+                  <button
+                    type="button"
+                    className="sys-more"
+                    onClick={() => setOpenRuns((prev) => new Set(prev).add(runId))}
+                  >
+                    +{hidden} avisos
+                  </button>
+                )}
+                <span>{m.text}</span>
               </div>
-              {m.media ? (
-                m.media.kind === 'gif' ? (
-                  <a className="chat-gif-link" href={m.media.url} target="_blank" rel="noreferrer">
+            );
+          }
+          const prev = chat[i - 1];
+          const next = chat[i + 1];
+          const joinsPrev = !!prev && !prev.system && prev.from === m.from && m.at - prev.at < 180_000;
+          const joinsNext = !!next && !next.system && next.from === m.from && next.at - m.at < 180_000;
+          const mine = m.from === meId;
+          const emojiOnly = !m.media && isEmojiOnly(m.text);
+          return (
+            <div
+              key={m.id}
+              className={`chat-msg ${mine ? 'mine' : ''} ${joinsPrev ? 'cont' : ''} ${joinsNext ? 'has-next' : ''}`}
+            >
+              {!mine && (
+                <span className="chat-avatar">
+                  {!joinsNext && (
+                    <span className="avatar sm" style={{ background: avatarColor(m.name) }} title={m.name}>
+                      {initials(m.name)}
+                    </span>
+                  )}
+                </span>
+              )}
+              <div className="chat-body">
+                {!joinsPrev && (
+                  <div className="chat-head">
+                    {!mine && (
+                      <span className="chat-name" style={{ color: colorFor(m.name) }}>
+                        {m.name}
+                      </span>
+                    )}
+                    <span className="chat-at">{hhmm(m.at)}</span>
+                  </div>
+                )}
+                {m.media ? (
+                  m.media.kind === 'gif' ? (
+                    <a className="chat-gif-link" href={m.media.url} target="_blank" rel="noreferrer">
+                      <img
+                        className="chat-gif"
+                        src={m.media.url}
+                        width={m.media.width}
+                        height={m.media.height}
+                        alt="GIF"
+                        loading="lazy"
+                      />
+                    </a>
+                  ) : (
                     <img
-                      className="chat-gif"
+                      className="chat-sticker"
                       src={m.media.url}
                       width={m.media.width}
                       height={m.media.height}
-                      alt="GIF"
+                      alt="Sticker"
                       loading="lazy"
                     />
-                  </a>
+                  )
                 ) : (
-                  <img
-                    className="chat-sticker"
-                    src={m.media.url}
-                    width={m.media.width}
-                    height={m.media.height}
-                    alt="Sticker"
-                    loading="lazy"
-                  />
-                )
-              ) : (
-                <span className={`chat-text ${isEmojiOnly(m.text) ? 'big' : ''}`}>{m.text}</span>
-              )}
+                  <span className={`chat-text ${emojiOnly ? 'big' : ''}`}>{m.text}</span>
+                )}
+              </div>
             </div>
-          ),
-        )}
+          );
+        })}
       </div>
 
       {picker && (
@@ -117,24 +176,28 @@ export default function ChatPanel({ chat, meId, onSend, onSendMedia }: Props) {
           submit();
         }}
       >
-        <button
-          type="button"
-          className={`icon-btn picker-toggle ${picker ? 'on' : ''}`}
-          onClick={() => setPicker(picker ? null : 'emoji')}
-          aria-label="Emojis, GIFs y stickers"
-        >
-          <IconSmile />
-        </button>
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Escribe un mensaje…"
-          maxLength={500}
-          aria-label="Mensaje"
-        />
-        <button className="btn primary" disabled={!text.trim()} aria-label="Enviar">
-          <IconSend />
-        </button>
+        <div className="composer">
+          <button
+            type="button"
+            className={`icon-btn picker-toggle ${picker ? 'on' : ''}`}
+            onClick={() => setPicker(picker ? null : 'emoji')}
+            aria-label="Emojis, GIFs y stickers"
+            aria-expanded={!!picker}
+          >
+            <IconSmile />
+          </button>
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Escribe un mensaje…"
+            maxLength={500}
+            aria-label="Mensaje"
+            enterKeyHint="send"
+          />
+          <button className="send-btn" disabled={!text.trim()} aria-label="Enviar">
+            <IconSend size={16} />
+          </button>
+        </div>
       </form>
     </div>
   );
@@ -158,16 +221,20 @@ function ChatPicker({
   return (
     <div className="chat-picker">
       <div className="chat-picker-tabs">
-        <button className={`tab-btn ${tab === 'emoji' ? 'active' : ''}`} onClick={() => onTab('emoji')}>
-          Emojis
-        </button>
-        <button className={`tab-btn ${tab === 'gif' ? 'active' : ''}`} onClick={() => onTab('gif')}>
-          GIFs
-        </button>
-        <button className={`tab-btn ${tab === 'sticker' ? 'active' : ''}`} onClick={() => onTab('sticker')}>
-          Stickers
-        </button>
-        <button className="icon-btn picker-close" onClick={onClose} aria-label="Cerrar panel">
+        <nav className="seg mini" style={{ '--i': PICKER_TABS.findIndex((t) => t.id === tab) } as CSSProperties}>
+          {PICKER_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`tab-btn ${tab === t.id ? 'active' : ''}`}
+              onClick={() => onTab(t.id)}
+              aria-pressed={tab === t.id}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        <button type="button" className="icon-btn picker-close" onClick={onClose} aria-label="Cerrar panel">
           <IconX size={15} />
         </button>
       </div>
