@@ -2,6 +2,8 @@
 
 A synchronized YouTube watch party, with no accounts, for every platform: it runs in the browser on any device (PC, Android, iPhone) and installs as a **Progressive Web App**.
 
+https://syncplay-avtu.onrender.com/
+
 ## Features
 
 - 🎬 **Real sync**: the server is the source of truth. Play, pause and seek propagate to everyone; each client estimates the server clock (NTP-lite over the WebSocket) and automatically corrects drift over 1.5 s. It resyncs when the tab regains focus or the connection drops.
