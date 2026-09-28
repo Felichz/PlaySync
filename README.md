@@ -30,8 +30,6 @@ YouTube video never passes through the server. Each client plays the official Yo
   </tr>
 </table>
 
-https://syncplay-avtu.onrender.com/
-
 ## Features
 
 - **Room-wide playback**: play, pause, seek and end of video apply to everyone; the queue advances by itself.
