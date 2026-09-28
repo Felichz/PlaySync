@@ -6,7 +6,7 @@ Watch YouTube or a public Google Drive video in sync with people on other device
 
 > The demo runs on a free Render instance that sleeps when idle, so the first load can take up to a minute.
 
-<img src="docs/screenshots/playsync-main.webp" width="100%" alt="PlaySync room on a desktop, as the host: Big Buck Bunny playing at 0:13 with custom controls, the room code SWGHAK in a ticket-shaped badge, a 'Viendo juntos' status chip, two avatars, and a chat between Felix and Sofi in the side panel.">
+<img src="docs/screenshots/playsync-main.webp" width="100%" alt="PlaySync room on a desktop, as the host: Big Buck Bunny playing with custom controls, the room code in a ticket-shaped badge, a 'Watching together' status chip, two avatars, and a chat between Felix and Sofi in the side panel.">
 
 ## What it is
 
@@ -17,14 +17,14 @@ YouTube video never passes through the server. Each client plays the official Yo
 <table>
   <tr>
     <td width="260" valign="top">
-      <img src="docs/screenshots/playsync-mobile.webp" width="260" alt="The same room on a guest's phone, captured a second after the desktop shot: the video at 0:14, a lock on the play button, a 'Solo miras · Pedir el control' pill, the same chat, and a bottom tab bar with Chat, Cola and Gente.">
-      <br><sub>The same room on the guest's phone, a second later (0:14). Guests watch by default and can ask the host for control.</sub>
+      <img src="docs/screenshots/playsync-mobile.webp" width="260" alt="The same room on a guest's phone, captured in the same session: the video, a lock on the play button, a 'Just watching · Ask for control' pill, the same chat, and a bottom tab bar with Chat, Queue and People.">
+      <br><sub>The same room on the guest's phone. Guests watch by default and can ask the host for control.</sub>
     </td>
     <td valign="top">
-      <img src="docs/screenshots/playsync-search.webp" width="480" alt="YouTube search inside the player: a '¿Qué vemos?' search box with the query 'blender open movie' and a grid of video results with thumbnails, durations, channels and view counts. The queue panel on the right is empty.">
+      <img src="docs/screenshots/playsync-search.webp" width="480" alt="YouTube search inside the player: a 'What should we watch?' search box with the query 'blender open movie' and a grid of video results with thumbnails, durations, channels and view counts. The queue panel on the right is empty.">
       <br><sub>Search replaces the player when nothing is playing. No API key needed.</sub>
       <br><br>
-      <img src="docs/screenshots/playsync-landing.webp" width="480" alt="Landing page with the headline 'Mismo video. Mismo segundo.', a name field, a 'Crear una sala' button, a room code field, and an illustration of a laptop in Madrid and a phone in Bogotá playing the same frame.">
+      <img src="docs/screenshots/playsync-landing.webp" width="480" alt="Landing page with the headline 'Same video. Same second.', a name field, a 'Create a room' button, a room code field, and an illustration of a laptop in Madrid and a phone in Bogotá playing the same frame.">
       <br><sub>Landing: pick a name, create a room or join with a code.</sub>
     </td>
   </tr>
