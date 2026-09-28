@@ -25,9 +25,12 @@ function hueFor(name: string): number {
   return h;
 }
 
-/** Per-person text color, soft enough to read on the night ground. */
+/**
+ * Per-person text color. The hue is the person's; saturation and lightness come from the theme
+ * (`--name-s` / `--name-l`): soft on the night ground, deep enough to read on the light one.
+ */
 export function colorFor(name: string): string {
-  return `hsl(${hueFor(name)} 78% 76%)`;
+  return `hsl(${hueFor(name)} var(--name-s, 78%) var(--name-l, 76%))`;
 }
 
 /** Per-person avatar fill (paired with dark initials). */

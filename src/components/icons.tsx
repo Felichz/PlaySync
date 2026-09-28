@@ -158,6 +158,19 @@ export const IconUsers = ({ size = 16, className }: P) =>
     </>,
   );
 
+export const IconSun = ({ size = 14, className }: P) =>
+  svg(
+    size,
+    className,
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4" />
+    </>,
+  );
+
+export const IconMoon = ({ size = 14, className }: P) =>
+  svg(size, className, <path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" />);
+
 /** Brand mark: two play marks, one catching up to the other. */
 export const Logo = ({ size = 28, className }: P) => (
   <svg width={size} height={size} viewBox="0 0 512 512" className={className} aria-hidden="true">

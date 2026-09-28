@@ -12,6 +12,7 @@ export const es: Messages = {
     roomTitle: (code: string) => `Sala ${code} · PlaySync`,
   },
   language: 'Idioma',
+  theme: { label: 'Tema', light: 'Claro', dark: 'Oscuro' },
   guest: 'Invitado',
 
   landing: {

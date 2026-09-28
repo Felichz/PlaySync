@@ -11,6 +11,7 @@ export const en = {
     roomTitle: (code: string) => `Room ${code} · PlaySync`,
   },
   language: 'Language',
+  theme: { label: 'Theme', light: 'Light', dark: 'Dark' },
   guest: 'Guest',
 
   landing: {

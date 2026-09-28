@@ -20,6 +20,26 @@ colors:
   rose: "#ff8497"
   mint: "#7fdcae"
   danger: "#ff7272"
+colors-light:
+  ground: "#f3ebe4"
+  well: "#fffbf8"
+  panel: "#fbf6f2"
+  raised: "#eee4dd"
+  raised-2: "#e4d7cf"
+  glass: "rgba(252, 248, 244, 0.74)"
+  line: "rgba(74, 38, 48, 0.10)"
+  line-strong: "rgba(74, 38, 48, 0.17)"
+  ink: "#2a1b22"
+  dim: "#65525a"
+  faint: "#76626a"
+  glow: "#b5481f"
+  glow-hi: "#9a3a18"
+  glow-ink: "#fff8f3"
+  glow-dim: "rgba(196, 85, 44, 0.12)"
+  glow-grad: "#c75830 to #a93f1a"
+  rose: "#c93f62"
+  mint: "#23895b"
+  danger: "#b8322f"
 typography:
   display: "Bricolage Grotesque 700–750 (headlines, titles, room codes)"
   body: "Figtree 400–700 (all UI text), tabular-nums for timecodes"
@@ -58,6 +78,36 @@ video's own colors spilling into the space behind everything.
 - **Rose #ff8497:** only as glow's partner (logo, own-bubble tint, ambient light).
 - **Mint:** "connected/here" dots only. **Danger:** errors and reconnecting only.
 - Neutrals are warm (plum-tinted); hairlines are warm white-alpha, never gray.
+
+## Light edition: "Matinée"
+
+The same couch on a Sunday afternoon. Dark stays the default when the system has no preference
+(night-first); light follows `prefers-color-scheme: light` or the person's pick.
+
+- **Ground:** warm linen `#f3ebe4`, never pure white. Panels are near-white glass
+  (`rgba(252, 248, 244, 0.74)`), inputs a bright well `#fffbf8`, others' chat bubbles and ghost
+  buttons a sand `#eee4dd`. Hairlines are plum-brown alpha (`rgba(74, 38, 48, 0.10 / 0.17)`).
+- **Ink:** plum-brown `#2a1b22` (13.9:1 on the ground), dim `#65525a` (5.6:1), faint `#76626a`
+  (4.8:1).
+- **Accent:** apricot can't carry text on linen, so glow becomes terracotta `#b5481f` (4.6:1, text
+  and fills alike), `#9a3a18` for text on glow tints, and primary buttons a `#c75830 → #a93f1a`
+  gradient with cream ink `#fff8f3` (4.9:1 at the label). Rose `#c93f62`, mint `#23895b` and
+  danger `#b8322f` are the same roles, deepened for a light ground.
+- **Depth:** shadows are warm brown (`rgba(84, 44, 36, …)`) and short, with a 1px white inset on
+  glass; black shadows are never used on linen. Segmented thumbs and switch knobs turn white.
+- **The screen stays dark.** `.player-frame` (and the player in fullscreen) re-declares the night
+  tokens, so the video, its overlays, floating reactions and the YouTube search keep the cinema
+  look, a dark screen in a lit room, grounded by a warm shadow.
+- **Screen light** is a softer wash in daylight (opacity 0.22, 0.32 while playing) and the
+  vignette fades to linen instead of black. Chat names use the person's hue at `62% / 32%`
+  instead of `78% / 76%` (`--name-s` / `--name-l`).
+
+**Choosing a theme:** a sun/moon segmented control, the EN/ES switch's twin, sits next to it on
+the landing page and on the preferences line of the People panel (which is also where settings
+live on phones). The choice is stored in `localStorage['playsync:theme']` (`'light'` or `'dark'`);
+without it the app follows the system live. An inline script in `index.html` sets
+`<html data-theme>`, `color-scheme`, `<meta name="theme-color">` (`#f3ebe4` / `#0f0b10`) and the
+iOS status bar style before first paint. The PWA manifest keeps the night colors for the splash.
 
 ## Typography
 

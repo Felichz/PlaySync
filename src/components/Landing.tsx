@@ -3,6 +3,7 @@ import { useI18n } from '../i18n';
 import { randomCode } from '../lib/util';
 import { IconArrow, IconPause, IconReturn, Logo } from './icons';
 import LangSwitch from './LangSwitch';
+import ThemeSwitch from './ThemeSwitch';
 
 type Props = {
   initialName: string;
@@ -30,6 +31,7 @@ export default function Landing({ initialName, lastRoom, onJoin }: Props) {
         <Logo size={30} />
         <span className="wordmark">PlaySync</span>
         <LangSwitch className="landing-lang" />
+        <ThemeSwitch />
       </header>
 
       <main className="landing-main">

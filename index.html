@@ -18,6 +18,26 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="PlaySync" />
+    <script>
+      // Theme before first paint, so a light room never flashes dark (and the other way round).
+      // Saved choice in localStorage 'playsync:theme' ('light' | 'dark'); otherwise the system's.
+      (function () {
+        var t = null;
+        try {
+          t = localStorage.getItem('playsync:theme');
+        } catch (e) {}
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        var root = document.documentElement;
+        root.setAttribute('data-theme', t);
+        root.style.colorScheme = t;
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f3ebe4' : '#0f0b10');
+        document
+          .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+          .setAttribute('content', t === 'light' ? 'default' : 'black-translucent');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

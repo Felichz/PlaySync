@@ -4,6 +4,7 @@ import { Rich, useI18n } from '../i18n';
 import { avatarColor, initials } from '../lib/util';
 import { IconCrown, IconHand, IconPencil, IconShare } from './icons';
 import LangSwitch from './LangSwitch';
+import ThemeSwitch from './ThemeSwitch';
 
 type Props = {
   code: string;
@@ -154,8 +155,14 @@ export default function PeoplePanel({
           </div>
         </label>
         <div className="lang-row">
-          <span>{t.language}</span>
-          <LangSwitch />
+          <span className="pref">
+            <span>{t.language}</span>
+            <LangSwitch />
+          </span>
+          <span className="pref">
+            <span>{t.theme.label}</span>
+            <ThemeSwitch />
+          </span>
         </div>
       </form>
     </div>
