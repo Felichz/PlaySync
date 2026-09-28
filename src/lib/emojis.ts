@@ -1,11 +1,23 @@
 // Emoji picker data (WhatsApp-style categories) + per-user recent emojis.
 
-export type EmojiCategory = { icon: string; name: string; emojis: string[] };
+export type EmojiCategoryId =
+  | 'faces'
+  | 'gestures'
+  | 'hearts'
+  | 'animals'
+  | 'food'
+  | 'activities'
+  | 'objects'
+  | 'symbols'
+  | 'flags';
+
+/** `id` doubles as the key of the category's name in the message catalogs. */
+export type EmojiCategory = { icon: string; id: EmojiCategoryId; emojis: string[] };
 
 export const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
     icon: '😀',
-    name: 'Caras',
+    id: 'faces',
     emojis: [
       '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇',
       '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪',
@@ -16,7 +28,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
   {
     icon: '👋',
-    name: 'Gestos',
+    id: 'gestures',
     emojis: [
       '👋', '🤚', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙',
       '👈', '👉', '👆', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏',
@@ -25,7 +37,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
   {
     icon: '❤️',
-    name: 'Corazones',
+    id: 'hearts',
     emojis: [
       '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕',
       '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '💯', '💢', '💥', '💫',
@@ -34,7 +46,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
   {
     icon: '🐶',
-    name: 'Animales',
+    id: 'animals',
     emojis: [
       '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮',
       '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🦆', '🦉', '🦇', '🐺', '🐗', '🐴',
@@ -44,7 +56,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
   {
     icon: '🍔',
-    name: 'Comida',
+    id: 'food',
     emojis: [
       '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍒', '🍑',
       '🥭', '🍍', '🥥', '🥝', '🍅', '🥑', '🍆', '🥔', '🥕', '🌽', '🌶️', '🥒',
@@ -55,7 +67,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
   {
     icon: '⚽',
-    name: 'Actividades',
+    id: 'activities',
     emojis: [
       '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🎱', '🏓', '🏸', '🥅', '🎮', '🎲',
       '🎯', '🎳', '🎰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎸', '🎺',
@@ -64,7 +76,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
   {
     icon: '💡',
-    name: 'Objetos',
+    id: 'objects',
     emojis: [
       '⌚', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '💾', '💿', '📷', '📸', '📹',
       '🎥', '📞', '📺', '📻', '🎙️', '⏰', '🔋', '💡', '🔦', '🕯️', '💸', '💵',
@@ -74,7 +86,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
   {
     icon: '🔣',
-    name: 'Símbolos',
+    id: 'symbols',
     emojis: [
       '♠️', '♥️', '♦️', '♣️', '🃏', '🀄', '🎴', '🔴', '🟠', '🟡', '🟢', '🔵',
       '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '💠', '🔔', '✅', '❌', '❎', '➕',
@@ -84,7 +96,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
   {
     icon: '🚩',
-    name: 'Banderas',
+    id: 'flags',
     emojis: [
       '🏁', '🚩', '🎌', '🏴', '🏳️', '🏳️‍🌈', '🇦🇷', '🇧🇴', '🇧🇷', '🇨🇱', '🇨🇴', '🇨🇷',
       '🇨🇺', '🇩🇴', '🇪🇨', '🇸🇻', '🇬🇹', '🇭🇳', '🇲🇽', '🇳🇮', '🇵🇦', '🇵🇾', '🇵🇪', '🇵🇷',

@@ -1,33 +1,29 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Participant } from '../../shared/protocol';
 import { useRoom } from '../hooks/useRoom';
+import { isDefaultName, Rich, useI18n } from '../i18n';
 import { avatarColor, getLS, initials, setLS } from '../lib/util';
+import Ambient from './Ambient';
 import ChatPanel from './ChatPanel';
 import { IconBack, IconChat, IconCrown, IconFilm, IconHand, IconShare, IconUsers, IconX, Logo } from './icons';
+import NameModal from './NameModal';
 import PeoplePanel from './PeoplePanel';
 import Player from './Player';
 import QueuePanel from './QueuePanel';
 
 type Tab = 'chat' | 'queue' | 'people';
 
-const STATUS_TEXT: Record<string, string> = {
-  connecting: 'Conectando…',
-  online: 'Conectado',
-  offline: 'Reconectando…',
-};
-
 export default function Room({ code, onLeave }: { code: string; onLeave(): void }) {
+  const { t } = useI18n();
   const room = useRoom(code, getLS('playsync.name'));
+  const [askName, setAskName] = useState(() => isDefaultName(getLS('playsync.name')));
   const [tab, setTab] = useState<Tab>('queue');
   const [unread, setUnread] = useState(0);
   const seenRef = useRef(0);
 
   useEffect(() => {
-    document.title = `Sala ${code} · PlaySync`;
-    return () => {
-      document.title = 'PlaySync — Mira YouTube juntos';
-    };
-  }, [code]);
+    document.title = t.meta.roomTitle(code);
+  }, [code, t]);
 
   useEffect(() => {
     setLS('playsync.lastRoom', code);
@@ -48,22 +44,22 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
     const url = `${window.location.origin}${window.location.pathname}#/r/${code}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'PlaySync', text: `Únete a mi sala: ${code}`, url });
+        await navigator.share({ title: 'PlaySync', text: t.room.shareText(code), url });
       } else {
         await navigator.clipboard.writeText(url);
-        room.showToast('Enlace copiado. Pásaselo a quien quieras.');
+        room.showToast(t.room.linkCopied);
       }
     } catch {
-      /* cancelado por el usuario */
+      /* the user cancelled */
     }
   };
 
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(code);
-      room.showToast(`Código ${code} copiado`);
+      room.showToast(t.room.codeCopied(code));
     } catch {
-      /* sin permiso de portapapeles */
+      /* no clipboard permission */
     }
   };
 
@@ -71,24 +67,24 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
   const offline = room.status === 'offline';
 
   const tabs: { id: Tab; label: string; icon: ReactNode; badge?: number }[] = [
-    { id: 'chat', label: 'Chat', icon: <IconChat size={16} />, badge: unread || undefined },
-    { id: 'queue', label: 'Cola', icon: <IconFilm size={16} />, badge: room.state?.queue.length || undefined },
-    { id: 'people', label: 'Gente', icon: <IconUsers size={16} />, badge: room.participants.length || undefined },
+    { id: 'chat', label: t.room.tabs.chat, icon: <IconChat size={16} />, badge: unread || undefined },
+    { id: 'queue', label: t.room.tabs.queue, icon: <IconFilm size={16} />, badge: room.state?.queue.length || undefined },
+    { id: 'people', label: t.room.tabs.people, icon: <IconUsers size={16} />, badge: room.participants.length || undefined },
   ];
-  const tabIndex = tabs.findIndex((t) => t.id === tab);
+  const tabIndex = tabs.findIndex((x) => x.id === tab);
 
   const tabButtons = (className: string) => (
-    <nav className={className} aria-label="Paneles de la sala" style={{ '--i': tabIndex } as CSSProperties}>
-      {tabs.map((t) => (
+    <nav className={className} aria-label={t.room.panels} style={{ '--i': tabIndex } as CSSProperties}>
+      {tabs.map((x) => (
         <button
-          key={t.id}
-          className={`tab-btn ${t.id === tab ? 'active' : ''}`}
-          onClick={() => setTab(t.id)}
-          aria-pressed={t.id === tab}
+          key={x.id}
+          className={`tab-btn ${x.id === tab ? 'active' : ''}`}
+          onClick={() => setTab(x.id)}
+          aria-pressed={x.id === tab}
         >
-          {t.icon}
-          <span>{t.label}</span>
-          {t.badge != null && t.badge > 0 && <span className={`badge ${t.id === 'chat' ? 'hot' : ''}`}>{t.badge}</span>}
+          {x.icon}
+          <span>{x.label}</span>
+          {x.badge != null && x.badge > 0 && <span className={`badge ${x.id === 'chat' ? 'hot' : ''}`}>{x.badge}</span>}
         </button>
       ))}
     </nav>
@@ -96,10 +92,15 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
 
   return (
     <div className={`room ${live ? 'is-live' : ''}`}>
-      <Ambient videoId={room.state?.media ? null : (room.state?.videoId ?? null)} live={live} />
+      <Ambient
+        videoId={room.state?.media ? null : (room.state?.videoId ?? null)}
+        live={live}
+        state={room.state}
+        sync={room.sync}
+      />
 
       <header className="topbar">
-        <button className="icon-btn" onClick={onLeave} aria-label="Salir de la sala">
+        <button className="icon-btn" onClick={onLeave} aria-label={t.room.leave}>
           <IconBack />
         </button>
         <span className="brand">
@@ -107,10 +108,10 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
           <span className="wordmark">PlaySync</span>
         </span>
 
-        <button className="ticket" onClick={() => void copyCode()} title={`${STATUS_TEXT[room.status]} · copiar código`}>
+        <button className="ticket" onClick={() => void copyCode()} title={t.room.ticketTitle(t.room.status[room.status])}>
           <span className="ticket-stub">
             <span className={`conn-dot ${room.status}`} />
-            Sala
+            {t.room.ticketStub}
           </span>
           <span className="ticket-code">{code}</span>
         </button>
@@ -123,7 +124,7 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
           {offline ? (
             <>
               <i className="dot" />
-              <span>Reconectando…</span>
+              <span>{t.room.status.offline}</span>
             </>
           ) : live ? (
             <>
@@ -132,19 +133,19 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
                 <i />
                 <i />
               </span>
-              <span>Viendo juntos</span>
+              <span>{t.room.live}</span>
             </>
           ) : (
             <>
               <i className="dot" />
-              <span>En pausa</span>
+              <span>{t.room.paused}</span>
             </>
           )}
         </span>
 
         <button className="btn soft small invite" onClick={() => void share()}>
           <IconShare size={14} />
-          <span>Invitar</span>
+          <span>{t.room.invite}</span>
         </button>
       </header>
 
@@ -158,7 +159,7 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
             onLoad={(videoId, title) => room.actions.load(videoId, title, true)}
             onQueueAdd={(videoId, title) => {
               room.actions.queueAdd(videoId, title);
-              room.showToast('Añadido a la cola');
+              room.showToast(t.room.addedToQueue);
             }}
             onRequestControl={room.actions.requestControl}
           />
@@ -208,6 +209,17 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
 
       {tabButtons('tabbar')}
 
+      {askName && (
+        <NameModal
+          others={room.participants.filter((p) => p.id !== room.me)}
+          onSave={(n) => {
+            room.actions.rename(n);
+            setAskName(false);
+          }}
+          onSkip={() => setAskName(false)}
+        />
+      )}
+
       {room.requests.length > 0 && (
         <div className="requests" role="alert">
           {room.requests.map((r) => (
@@ -216,12 +228,12 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
                 <IconHand />
               </span>
               <span className="request-text">
-                <b>{r.name}</b> pide el control del video
+                <Rich parts={t.room.request(<b>{r.name}</b>)} />
               </span>
               <button className="btn primary small" onClick={() => room.actions.grant(r.id, true)}>
-                Dar control
+                {t.room.giveControl}
               </button>
-              <button className="icon-btn" onClick={() => room.dismissRequest(r.id)} aria-label="Ignorar">
+              <button className="icon-btn" onClick={() => room.dismissRequest(r.id)} aria-label={t.room.dismiss}>
                 <IconX />
               </button>
             </div>
@@ -238,24 +250,13 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
   );
 }
 
-/** The screen's light spilling into the room: the playing video's thumbnail, blurred wide. */
-function Ambient({ videoId, live }: { videoId: string | null; live: boolean }) {
-  return (
-    <div className={`ambient ${live ? 'live' : ''}`} aria-hidden="true">
-      <div className="ambient-base" />
-      {videoId && (
-        <img key={videoId} className="ambient-img" src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" />
-      )}
-    </div>
-  );
-}
-
 /** Who's on the couch: overlapping avatars in the top bar. */
 function Couch({ people, meId, onOpen }: { people: Participant[]; meId: string; onOpen(): void }) {
+  const { t } = useI18n();
   if (people.length === 0) return null;
   const shown = people.slice(0, 4);
   const extra = people.length - shown.length;
-  const label = people.length === 1 ? 'Solo tú por ahora' : `${people.length} en la sala`;
+  const label = t.room.couch(people.length);
   return (
     <button className="couch" onClick={onOpen} title={people.map((p) => p.name).join(', ')} aria-label={label}>
       {shown.map((p) => (
@@ -266,7 +267,7 @@ function Couch({ people, meId, onOpen }: { people: Participant[]; meId: string; 
         >
           {initials(p.name)}
           {p.role === 'host' && (
-            <span className="crown" title="Anfitrión">
+            <span className="crown" title={t.room.host}>
               <IconCrown size={9} />
             </span>
           )}

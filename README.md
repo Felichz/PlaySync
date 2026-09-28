@@ -10,7 +10,7 @@ Watch YouTube or a public Google Drive video in sync with people on other device
 
 ## What it is
 
-PlaySync is a watch party for two or three people in different places, on any mix of phones and computers. There are no accounts and nothing to install: open the site, create a room and send the link (`#/r/CODE`). It also installs as a Progressive Web App on Android, iOS and desktop. The interface is in Spanish, written for its first users; code and docs are in English.
+PlaySync is a watch party for two or three people in different places, on any mix of phones and computers. There are no accounts and nothing to install: open the site, create a room and send the link (`#/r/CODE`). It also installs as a Progressive Web App on Android, iOS and desktop. The interface is in English by default, with a Spanish version (an EN / ES switch on the landing page and in the room's People panel); code and docs are in English.
 
 YouTube video never passes through the server. Each client plays the official YouTube embed directly, and the server only holds the room's state and relays small JSON messages over one WebSocket. The server owns the playback clock and every client keeps steering its own player toward it, which is where most of the work is: keeping a phone on mobile data and a desktop on Wi-Fi within a second or two of each other through buffering, background tabs, autoplay blocks and reconnects.
 
@@ -39,6 +39,8 @@ YouTube video never passes through the server. Each client plays the official Yo
 - **YouTube search** inside the player for people with control: shown when nothing is playing, after the last video ends, or when a video refuses to be embedded.
 - **Chat** with system notices (joins, leaves, what's playing), an emoji picker with per-user recents, and Giphy GIFs and stickers with search and recents.
 - **Floating reactions**: GIFs, stickers and emoji-only messages float over the video for everyone, fullscreen included.
+- **Screen light**: the playing YouTube video's colors glow behind the room, following the picture through YouTube's seek-preview frames, with the thumbnail as a fallback.
+- **Name prompt**: someone who opens a room link without a name is asked for one on arrival, and can skip as Guest.
 - **Custom controls** (YouTube's own chrome is hidden) and a "tap to join with sound" overlay when the browser blocks autoplay, as iOS does.
 - **Installable PWA** with a manifest, an auto-updating service worker and generated icons.
 - **Responsive layout**: bottom tab bar on phones; video and a side panel next to each other from 940px wide, or in landscape from 520px.

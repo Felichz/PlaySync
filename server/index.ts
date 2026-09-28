@@ -14,6 +14,7 @@ import type {
   RoomState,
   SearchResult,
   ServerToClient,
+  SystemEvent,
   VideoItem,
 } from '../shared/protocol';
 
@@ -153,8 +154,8 @@ function pushChat(r: Room, msg: ChatMessage): void {
   broadcast(r, { type: 'chat', message: msg });
 }
 
-function pushSystem(r: Room, text: string): void {
-  pushChat(r, { id: randomUUID(), from: '', name: '', text, at: now(), system: true });
+function pushSystem(r: Room, event: SystemEvent): void {
+  pushChat(r, { id: randomUUID(), from: '', name: '', text: '', event, at: now(), system: true });
 }
 
 function getRoom(id: string): Room {
@@ -211,9 +212,9 @@ function normClientId(input: unknown): string | null {
 }
 
 function cleanName(input: unknown): string {
-  if (typeof input !== 'string') return 'Invitado';
+  if (typeof input !== 'string') return 'Guest';
   const n = input.trim().slice(0, 24);
-  return n || 'Invitado';
+  return n || 'Guest';
 }
 
 // Only allow media hosted by the provider we front (blocks arbitrary image embedding).
@@ -271,7 +272,7 @@ function join(conn: Conn, roomCode: string, name: string, clientId: string | nul
     participants: participantsOf(r),
   });
   broadcast(r, { type: 'participants', participants: participantsOf(r) }, conn.id);
-  pushSystem(r, `${conn.name} se unió`);
+  pushSystem(r, { kind: 'joined', name: conn.name });
 }
 
 function leave(conn: Conn): void {
@@ -287,7 +288,7 @@ function leave(conn: Conn): void {
     commit(r, { isPlaying: false });
     r.emptySince = now();
   } else {
-    pushSystem(r, `${conn.name} salió`);
+    pushSystem(r, { kind: 'left', name: conn.name });
     broadcast(r, { type: 'participants', participants: participantsOf(r) });
   }
 }
@@ -297,7 +298,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
     case 'join': {
       const code = normRoom(msg.room);
       if (!code) {
-        sendTo(conn, { type: 'error', code: 'bad-room', message: 'Código de sala inválido' });
+        sendTo(conn, { type: 'error', code: 'bad-room' });
         return;
       }
       join(conn, code, msg.name, normClientId(msg.clientId));
@@ -326,7 +327,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
       const t = now();
       conn.chatTimes = conn.chatTimes.filter((x) => t - x < 3000);
       if (conn.chatTimes.length >= 6) {
-        sendTo(conn, { type: 'error', code: 'flood', message: 'Vas muy rápido, espera un momento' });
+        sendTo(conn, { type: 'error', code: 'flood' });
         return;
       }
       conn.chatTimes.push(t);
@@ -335,16 +336,12 @@ function handle(conn: Conn, msg: ClientToServer): void {
     }
   }
 
-  // El resto de intents requieren estar en una sala.
+  // Everything else needs a room.
   const r = conn.room;
   if (!r) return;
 
   if (CONTROL_INTENTS.has(msg.type) && !canControl(r, conn)) {
-    sendTo(conn, {
-      type: 'error',
-      code: 'forbidden',
-      message: 'Necesitas control para hacer eso. Pídeselo al anfitrión.',
-    });
+    sendTo(conn, { type: 'error', code: 'forbidden' });
     return;
   }
 
@@ -356,10 +353,10 @@ function handle(conn: Conn, msg: ClientToServer): void {
       const had = r.controllers.has(target.clientId);
       if (msg.control && !had) {
         r.controllers.add(target.clientId);
-        pushSystem(r, `${conn.name} le dio el control a ${target.name}`);
+        pushSystem(r, { kind: 'granted', by: conn.name, to: target.name });
       } else if (!msg.control && had) {
         r.controllers.delete(target.clientId);
-        pushSystem(r, `${conn.name} le quitó el control a ${target.name}`);
+        pushSystem(r, { kind: 'revoked', by: conn.name, to: target.name });
       }
       emitParticipants(r);
       return;
@@ -369,10 +366,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
       const open = !!msg.open;
       if (open === r.openControl) return;
       r.openControl = open;
-      pushSystem(
-        r,
-        open ? 'Ahora todos pueden controlar el video' : 'Solo el anfitrión y quien tenga control manejan el video',
-      );
+      pushSystem(r, { kind: open ? 'control-open' : 'control-closed' });
       emitState(r);
       return;
     }
@@ -382,7 +376,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
       for (const c of r.participants.values()) {
         if (roleOf(r, c) === 'host') sendTo(c, { type: 'control-request', id: conn.id, name: conn.name });
       }
-      sendTo(conn, { type: 'error', code: 'requested', message: 'Le avisamos al anfitrión que quieres el control' });
+      sendTo(conn, { type: 'error', code: 'requested' });
       return;
     }
     case 'load': {
@@ -391,7 +385,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
       const title = normTitle(msg.title);
       r.ended = false;
       commit(r, { videoId: vid, videoTitle: title ?? null, media: null, position: 0, isPlaying: !!msg.autoplay });
-      pushSystem(r, `${conn.name} puso ${title ?? 'un video'}`);
+      pushSystem(r, { kind: 'loaded', by: conn.name, title });
       emitState(r);
       return;
     }
@@ -400,7 +394,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
       if (!media) return;
       r.ended = false;
       commit(r, { videoId: null, videoTitle: null, media, position: 0, isPlaying: false });
-      pushSystem(r, `${conn.name} puso un archivo${media.name ? `: ${media.name}` : ''}`);
+      pushSystem(r, { kind: 'loaded-file', by: conn.name, title: media.name });
       emitState(r);
       return;
     }
@@ -440,7 +434,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
           position: 0,
           isPlaying: true,
         });
-        pushSystem(r, `Siguiente: ${next.media.name ?? next.title ?? 'archivo'}`);
+        pushSystem(r, { kind: 'next', title: next.media.name ?? next.title });
       } else if (next?.videoId) {
         commit(r, {
           videoId: next.videoId,
@@ -449,7 +443,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
           position: 0,
           isPlaying: true,
         });
-        pushSystem(r, `Siguiente: ${next.title ?? next.videoId}`);
+        pushSystem(r, { kind: 'next', title: next.title ?? next.videoId });
       } else {
         commit(r, { isPlaying: false });
       }
@@ -470,7 +464,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
       } else {
         r.queue.push(item);
       }
-      pushSystem(r, `${conn.name} añadió ${item.title ?? vid}`);
+      pushSystem(r, { kind: 'added', by: conn.name, title: item.title ?? vid });
       emitState(r);
       return;
     }
@@ -485,7 +479,7 @@ function handle(conn: Conn, msg: ClientToServer): void {
       } else {
         r.queue.push({ media, title: media.name, addedBy: conn.name });
       }
-      pushSystem(r, `${conn.name} añadió ${media.name ?? 'un archivo'}`);
+      pushSystem(r, { kind: 'added', by: conn.name, title: media.name });
       emitState(r);
       return;
     }
@@ -502,10 +496,10 @@ function handle(conn: Conn, msg: ClientToServer): void {
       r.ended = false;
       if (item.media) {
         commit(r, { videoId: null, videoTitle: null, media: item.media, position: 0, isPlaying: true });
-        pushSystem(r, `${conn.name} saltó a ${item.media.name ?? item.title ?? 'archivo'}`);
+        pushSystem(r, { kind: 'jumped', by: conn.name, title: item.media.name ?? item.title });
       } else {
         commit(r, { videoId: item.videoId, videoTitle: item.title ?? null, media: null, position: 0, isPlaying: true });
-        pushSystem(r, `${conn.name} saltó a ${item.title ?? item.videoId}`);
+        pushSystem(r, { kind: 'jumped', by: conn.name, title: item.title ?? item.videoId });
       }
       emitState(r);
       return;
@@ -542,7 +536,7 @@ function checkHost(r: Room): void {
   r.hostClient = heir.clientId;
   r.hostAwaySince = null;
   r.controllers.delete(heir.clientId);
-  pushSystem(r, `${heir.name} ahora es anfitrión de la sala`);
+  pushSystem(r, { kind: 'new-host', name: heir.name });
   emitParticipants(r);
 }
 
@@ -571,6 +565,12 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/api/youtube/search') {
     void serveYouTubeSearch(url, res);
+    return;
+  }
+
+  const sbMatch = url.pathname.match(/^\/api\/youtube\/storyboard\/([\w-]{11})$/);
+  if (sbMatch) {
+    void serveStoryboard(sbMatch[1], res);
     return;
   }
 
@@ -606,7 +606,7 @@ wss.on('connection', (ws) => {
     id,
     clientId: id,
     ws,
-    name: 'Invitado',
+    name: 'Guest',
     room: null,
     alive: true,
     chatTimes: [],
@@ -757,13 +757,17 @@ type YTText = { simpleText?: string; runs?: { text?: string }[] };
 const ytText = (t: YTText | undefined): string | undefined =>
   t?.simpleText ?? (t?.runs ? t.runs.map((x) => x.text ?? '').join('') : undefined);
 
+/** Languages the UI ships in; search metadata (views, dates) comes back in the viewer's one. */
+type Lang = 'en' | 'es';
+const ACCEPT_LANGUAGE: Record<Lang, string> = { en: 'en-US,en;q=0.9', es: 'es-ES,es;q=0.9,en;q=0.6' };
+
 /** Keyless search: read the results page's embedded data (videos filter). */
-async function scrapeYouTube(q: string): Promise<SearchResult[]> {
+async function scrapeYouTube(q: string, hl: Lang): Promise<SearchResult[]> {
   const r = await fetch(
-    `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%253D%253D&hl=es`,
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%253D%253D&hl=${hl}`,
     {
       headers: {
-        'accept-language': 'es-ES,es;q=0.9,en;q=0.6',
+        'accept-language': ACCEPT_LANGUAGE[hl],
         'user-agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
         cookie: 'SOCS=CAI', // skip the EU consent interstitial
@@ -807,14 +811,14 @@ async function scrapeYouTube(q: string): Promise<SearchResult[]> {
 }
 
 /** Keyed fallback through the YouTube Data API (100 quota units per search). */
-async function apiYouTube(q: string, key: string): Promise<SearchResult[]> {
+async function apiYouTube(q: string, key: string, hl: Lang): Promise<SearchResult[]> {
   const qs = new URLSearchParams({
     part: 'snippet',
     type: 'video',
     maxResults: '20',
     videoEmbeddable: 'true',
     safeSearch: 'moderate',
-    relevanceLanguage: 'es',
+    relevanceLanguage: hl,
     q,
     key,
   });
@@ -834,13 +838,91 @@ async function apiYouTube(q: string, key: string): Promise<SearchResult[]> {
   });
 }
 
+// ------------------------------------------------------ youtube storyboard
+
+/** YouTube's seek-preview sprites: a grid of small frames sampled across the video. */
+type Storyboard = {
+  w: number;
+  h: number;
+  cols: number;
+  rows: number;
+  count: number;
+  intervalMs: number;
+  sheets: string[];
+};
+
+const sbCache = new Map<string, { at: number; sb: Storyboard | null }>();
+const SB_TTL = 3 * 60 * 60_000;
+const SB_MISS_TTL = 20 * 60_000;
+
+async function fetchStoryboard(videoId: string): Promise<Storyboard | null> {
+  const r = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=es`, {
+    headers: {
+      'accept-language': 'es-ES,es;q=0.9,en;q=0.6',
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+      cookie: 'SOCS=CAI',
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!r.ok) throw new Error(`YT_HTTP_${r.status}`);
+  const html = await r.text();
+  // Live streams use a different renderer and have no seekable storyboard.
+  const raw = html.match(/"playerStoryboardSpecRenderer":\{"spec":"((?:[^"\\]|\\.)+)"/)?.[1];
+  if (!raw) return null;
+  const spec = JSON.parse(`"${raw}"`) as string;
+  const seconds = Number(html.match(/"lengthSeconds":"(\d+)"/)?.[1] ?? 0);
+
+  // "baseUrl|w#h#count#cols#rows#intervalMs#name#sigh|…", one entry per resolution level.
+  const [base, ...levels] = spec.split('|');
+  const parsed = levels.map((l, i) => {
+    const [w, h, count, cols, rows, interval, name, sigh] = l.split('#');
+    return { i, w: +w, h: +h, count: +count, cols: +cols, rows: +rows, interval: +interval, name, sigh };
+  });
+  // Tiny frames are plenty once blurred; take the smallest level that still has real detail.
+  const lv = parsed.find((l) => l.w >= 80) ?? parsed[parsed.length - 1];
+  if (!lv || !base.startsWith('https://i.ytimg.com/') || !(lv.count > 0 && lv.cols > 0 && lv.rows > 0)) return null;
+  const intervalMs = lv.interval > 0 ? lv.interval : seconds > 0 ? (seconds * 1000) / lv.count : 0;
+  if (!intervalMs) return null;
+
+  const perSheet = lv.cols * lv.rows;
+  const sheets = Array.from({ length: Math.ceil(lv.count / perSheet) }, (_, n) => {
+    const url = base.replace('$L', String(lv.i)).replace('$N', lv.name.replace('$M', String(n)));
+    return lv.sigh ? `${url}&sigh=${lv.sigh}` : url;
+  });
+  return { w: lv.w, h: lv.h, cols: lv.cols, rows: lv.rows, count: lv.count, intervalMs, sheets };
+}
+
+async function serveStoryboard(videoId: string, res: http.ServerResponse): Promise<void> {
+  const cached = sbCache.get(videoId);
+  if (cached && now() - cached.at < (cached.sb ? SB_TTL : SB_MISS_TTL)) {
+    if (cached.sb) json(res, 200, cached.sb);
+    else json(res, 404, { error: 'NO_STORYBOARD' });
+    return;
+  }
+  try {
+    const sb = await fetchStoryboard(videoId);
+    sbCache.set(videoId, { at: now(), sb });
+    if (sbCache.size > 500) {
+      const oldest = sbCache.keys().next().value;
+      if (oldest !== undefined) sbCache.delete(oldest);
+    }
+    if (sb) json(res, 200, sb);
+    else json(res, 404, { error: 'NO_STORYBOARD' });
+  } catch (err) {
+    console.warn('storyboard failed:', (err as Error).message);
+    json(res, 502, { error: 'YOUTUBE_UNREACHABLE' });
+  }
+}
+
 async function serveYouTubeSearch(url: URL, res: http.ServerResponse): Promise<void> {
   const q = (url.searchParams.get('q') ?? '').trim().slice(0, 100);
   if (!q) {
     json(res, 400, { error: 'EMPTY_QUERY' });
     return;
   }
-  const cacheKey = q.toLowerCase();
+  const hl: Lang = url.searchParams.get('hl') === 'es' ? 'es' : 'en';
+  const cacheKey = `${hl}:${q.toLowerCase()}`;
   const cached = ytCache.get(cacheKey);
   if (cached && now() - cached.at < YT_TTL) {
     json(res, 200, { items: cached.items });
@@ -849,14 +931,14 @@ async function serveYouTubeSearch(url: URL, res: http.ServerResponse): Promise<v
 
   let items: SearchResult[] | null = null;
   try {
-    items = await scrapeYouTube(q);
+    items = await scrapeYouTube(q, hl);
   } catch (err) {
     console.warn('youtube scrape failed:', (err as Error).message);
   }
   const key = process.env.YOUTUBE_API_KEY;
   if ((!items || items.length === 0) && key) {
     try {
-      items = await apiYouTube(q, key);
+      items = await apiYouTube(q, key, hl);
     } catch (err) {
       console.warn('youtube api failed:', (err as Error).message);
     }

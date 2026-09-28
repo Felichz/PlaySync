@@ -35,11 +35,33 @@ export type ChatMessage = {
   id: string;
   from: string; // participant id ('' for system messages)
   name: string;
-  text: string;
+  text: string; // empty for system messages: clients render `event` in their own language
   at: number; // server clock, ms
   system?: boolean;
+  event?: SystemEvent;
   media?: ChatMedia;
 };
+
+/**
+ * What a system notice is about. The server sends facts, not sentences; each client words them
+ * in its own language. A missing `title` on `next`, `added` and `jumped` means an untitled file.
+ */
+export type SystemEvent =
+  | { kind: 'joined'; name: string }
+  | { kind: 'left'; name: string }
+  | { kind: 'granted'; by: string; to: string }
+  | { kind: 'revoked'; by: string; to: string }
+  | { kind: 'control-open' }
+  | { kind: 'control-closed' }
+  | { kind: 'loaded'; by: string; title?: string }
+  | { kind: 'loaded-file'; by: string; title?: string }
+  | { kind: 'next'; title?: string }
+  | { kind: 'added'; by: string; title?: string }
+  | { kind: 'jumped'; by: string; title?: string }
+  | { kind: 'new-host'; name: string };
+
+/** Why the server refused or acknowledged an intent; clients map it to their own wording. */
+export type ErrorCode = 'bad-room' | 'flood' | 'forbidden' | 'requested';
 
 /** Authoritative room state. `position` is the base at `lastUpdatedAt`. */
 export type RoomState = {
@@ -53,7 +75,7 @@ export type RoomState = {
   queue: VideoItem[];
   ended: boolean; // current source finished and nothing was queued
   openControl: boolean; // everyone may control playback
-  serverTime: number; // ms del reloj del servidor al generar el mensaje
+  serverTime: number; // server clock (ms) when the message was built
 };
 
 export type ServerToClient =
@@ -69,7 +91,7 @@ export type ServerToClient =
   | { type: 'participants'; participants: Participant[] }
   | { type: 'pong'; t0: number; t1: number }
   | { type: 'control-request'; id: string; name: string }
-  | { type: 'error'; code: string; message: string };
+  | { type: 'error'; code: ErrorCode };
 
 export type ClientToServer =
   | { type: 'join'; room: string; name: string; clientId?: string }

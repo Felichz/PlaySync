@@ -4,6 +4,7 @@ import { effectivePosition, type SyncClient } from '../lib/sync';
 import { loadYT, YT_STATE, type YTPlayer } from '../lib/yt';
 import { fmtBytes, fmtTime, getLS, setLS } from '../lib/util';
 import type { Floater } from '../hooks/useRoom';
+import { useI18n } from '../i18n';
 import { IconDrive, IconFull, IconHand, IconLock, IconMute, IconPause, IconPlay, IconVolume } from './icons';
 import YouTubeSearch from './YouTubeSearch';
 
@@ -20,6 +21,7 @@ type Props = {
 type Pending = { until: number; isPlaying?: boolean; position?: number };
 
 export default function Player({ sync, state, canControl, floaters, onLoad, onQueueAdd, onRequestControl }: Props) {
+  const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -35,7 +37,7 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
   const ytCreatingRef = useRef(false);
 
   const [blocked, setBlocked] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<'embed' | 'drive' | null>(null);
   const [cur, setCur] = useState(0);
   const [dur, setDur] = useState(0);
   const [muted, setMuted] = useState(false);
@@ -277,7 +279,7 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
               reconcile();
             },
             onError: () => {
-              setError('Este video no permite reproducción embebida o no existe. Prueba con otro.');
+              setError('embed');
             },
           },
         });
@@ -507,7 +509,7 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
             }}
             onError={() => {
               if (hasMedia) {
-                setError('No se pudo cargar el archivo de Drive (¿sigue compartido como público?).');
+                setError('drive');
                 readyRef.current = false;
                 setReady(false);
               }
@@ -517,25 +519,21 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
 
         {hasVideo && !hasMedia && !ready && (
           <div className="player-empty loading">
-            <span className="spinner lg" aria-label="Cargando" />
+            <span className="spinner lg" aria-label={t.player.loading} />
           </div>
         )}
 
         {hasMedia && !ready && !error && (
           <div className="player-empty loading">
             <span className="spinner lg" aria-hidden="true" />
-            <p>Preparando el archivo…</p>
+            <p>{t.player.preparingFile}</p>
           </div>
         )}
 
         {showSearch && (
           <YouTubeSearch
-            endedTitle={ended ? (title ?? 'el video') : null}
-            notice={
-              embedBlocked
-                ? `${title ? `«${title}»` : 'Ese video'} no se puede ver fuera de YouTube. Elige otro.`
-                : null
-            }
+            endedTitle={ended ? (title ?? t.player.theVideo) : null}
+            notice={embedBlocked ? t.player.embedBlocked(title ?? undefined) : null}
             onPlay={onLoad}
             onQueue={onQueueAdd}
             onReplay={userPlay}
@@ -547,29 +545,29 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
             <span className="idle-mark" aria-hidden="true">
               <IconPlay size={26} />
             </span>
-            <h2>{ended ? 'Terminó el video' : 'Esperando el primer video'}</h2>
-            <p>Quien tiene el control está eligiendo qué ver. Aparecerá aquí para todos a la vez.</p>
+            <h2>{ended ? t.player.ended : t.player.waiting}</h2>
+            <p>{t.player.idleBody}</p>
             <button className="btn soft" onClick={onRequestControl}>
               <IconHand />
-              Pedir el control
+              {t.people.askControl}
             </button>
           </div>
         )}
 
         {cued && !ended && canControl && (
-          <button className="player-overlay" onClick={userPlay} aria-label="Reproducir">
+          <button className="player-overlay" onClick={userPlay} aria-label={t.player.play}>
             <span className="big-play">
               <IconPlay size={28} />
             </span>
             {title && <span className="cue-title">{title}</span>}
-            <span className="cue-hint">Empieza para todos a la vez</span>
+            <span className="cue-hint">{t.player.cueHint}</span>
           </button>
         )}
 
         {cued && !ended && !canControl && (
           <div className="player-overlay passive">
             {title && <span className="cue-title">{title}</span>}
-            <span className="cue-hint">Listo. Empieza cuando quien tiene el control le dé play.</span>
+            <span className="cue-hint">{t.player.cuePassive}</span>
           </div>
         )}
 
@@ -578,14 +576,14 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
             <span className="big-play">
               <IconPlay size={28} />
             </span>
-            <span className="cue-title">La sala ya está viendo</span>
-            <span className="cue-hint">Toca para unirte con sonido</span>
+            <span className="cue-title">{t.player.blockedTitle}</span>
+            <span className="cue-hint">{t.player.blockedHint}</span>
           </button>
         )}
 
         {error && !showSearch && (
           <div className="player-error" role="alert">
-            {error}
+            {error === 'embed' ? t.player.embedError : t.player.driveError}
           </div>
         )}
 
@@ -597,7 +595,7 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
               style={{ ['--x' as string]: f.lane }}
             >
               {f.media ? <img src={f.media.url} alt="" /> : <span className="floater-emoji">{f.emoji}</span>}
-              <span className="floater-name">{f.mine ? 'Tú' : f.name}</span>
+              <span className="floater-name">{f.mine ? t.player.you : f.name}</span>
             </div>
           ))}
         </div>
@@ -608,8 +606,8 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
           className="play-btn"
           onClick={playing ? userPause : userPlay}
           disabled={!hasSomething() || !canControl}
-          aria-label={canControl ? (playing ? 'Pausar' : 'Reproducir') : 'Solo quien tiene el control puede reproducir'}
-          title={canControl ? undefined : 'Solo quien tiene el control puede reproducir'}
+          aria-label={canControl ? (playing ? t.player.pause : t.player.play) : t.player.locked}
+          title={canControl ? undefined : t.player.locked}
         >
           {!canControl ? <IconLock size={16} /> : playing ? <IconPause size={18} /> : <IconPlay size={18} />}
         </button>
@@ -628,12 +626,12 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
             onChange={(e) => setScrub(Number(e.target.value))}
             onPointerUp={commitScrub}
             onTouchEnd={commitScrub}
-            aria-label="Progreso del video"
+            aria-label={t.player.progress}
           />
           <span className="time end">{fmtTime(dur)}</span>
         </div>
         <div className="vol-group">
-          <button className="icon-btn" onClick={toggleMute} aria-label={muted ? 'Activar sonido' : 'Silenciar'}>
+          <button className="icon-btn" onClick={toggleMute} aria-label={muted ? t.player.unmute : t.player.mute}>
             {muted || vol === 0 ? <IconMute /> : <IconVolume />}
           </button>
           <input
@@ -644,10 +642,10 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
             value={vol}
             style={{ ['--fill' as string]: `${volPct}%` }}
             onChange={(e) => changeVolume(Number(e.target.value))}
-            aria-label="Volumen"
+            aria-label={t.player.volume}
           />
         </div>
-        <button className="icon-btn" onClick={toggleFullscreen} aria-label="Pantalla completa">
+        <button className="icon-btn" onClick={toggleFullscreen} aria-label={t.player.fullscreen}>
           <IconFull />
         </button>
       </div>
@@ -664,7 +662,7 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
           {!canControl && (
             <button className="control-note" onClick={onRequestControl}>
               <IconLock size={13} />
-              Solo miras · <b>Pedir el control</b>
+              {t.people.justWatching} · <b>{t.people.askControl}</b>
             </button>
           )}
         </div>

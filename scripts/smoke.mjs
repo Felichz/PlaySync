@@ -66,11 +66,12 @@ try {
   await b.open();
   b.send({ type: 'join', room: ROOM, name: 'Beto' });
   await b.wait((m) => m.type === 'welcome', 'welcome B');
+  // System notices carry an event, not a sentence: each client words it in its own language.
   const sysJoin = await a.wait(
-    (m) => m.type === 'chat' && m.message.system && m.message.text.includes('Beto'),
+    (m) => m.type === 'chat' && m.message.system && m.message.event?.kind === 'joined' && m.message.event.name === 'Beto',
     'join notice',
   );
-  check('system announces the join', !!sysJoin);
+  check('system announces the join', sysJoin.message.text === '');
 
   a.send({ type: 'chat', text: 'hola mundo' });
   const chatB = await b.wait((m) => m.type === 'chat' && m.message.text === 'hola mundo', 'chat');
@@ -105,7 +106,10 @@ try {
   const pingT0 = Date.now();
   a.send({ type: 'ping', t0: pingT0 });
   const pong = await a.wait((m) => m.type === 'pong' && m.t0 === pingT0, 'pong');
-  check('ping/pong NTP-lite', typeof pong.t1 === 'number' && pong.t1 >= pingT0);
+  // Same machine, but two processes can read the wall clock a few ms apart (seen on Windows),
+  // so check the server stamps its own clock rather than demanding t1 >= t0.
+  check('ping/pong NTP-lite', typeof pong.t1 === 'number' && Math.abs(pong.t1 - pingT0) < 1000,
+    `t1-t0=${pong.t1 - pingT0}ms`);
 
   await sleep(1500);
   b.msgs.length = 0; // drop stale states: we want the fresh one from sync-request
@@ -143,12 +147,19 @@ try {
   b.send({ type: 'request-control' });
   const req = await a.wait((m) => m.type === 'control-request', 'control request');
   check('host hears the request', req.name === 'Beto');
+  const ack = await b.wait((m) => m.type === 'error' && m.code === 'requested', 'request ack');
+  check('requester gets a code, not text', !!ack && ack.message === undefined);
 
   a.send({ type: 'grant', id: req.id, control: true });
   await b.wait(
     (m) => m.type === 'participants' && m.participants.some((p) => p.name === 'Beto' && p.role === 'control'),
     'grant',
   );
+  const granted = await b.wait(
+    (m) => m.type === 'chat' && m.message.event?.kind === 'granted',
+    'grant notice',
+  );
+  check('grant notice names both people', granted.message.event.by === 'Ana' && granted.message.event.to === 'Beto');
   b.msgs.length = 0;
   b.send({ type: 'play' });
   const replay = await b.wait((m) => m.type === 'state' && m.state.isPlaying === true, 'play after grant');

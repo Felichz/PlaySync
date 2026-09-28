@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Participant, Role } from '../../shared/protocol';
+import { Rich, useI18n } from '../i18n';
 import { avatarColor, initials } from '../lib/util';
 import { IconCrown, IconHand, IconPencil, IconShare } from './icons';
+import LangSwitch from './LangSwitch';
 
 type Props = {
   code: string;
@@ -30,6 +32,7 @@ export default function PeoplePanel({
   onSetOpenControl,
   onRequestControl,
 }: Props) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState(name);
   useEffect(() => setDraft(name), [name]);
   const dirty = draft.trim() !== '' && draft.trim() !== name;
@@ -42,31 +45,27 @@ export default function PeoplePanel({
         <div className="perm-card">
           <div className="perm-row">
             <div className="perm-text">
-              <strong>Todos controlan el video</strong>
-              <span>
-                {openControl
-                  ? 'Cualquiera puede pausar, adelantar y cambiar la cola.'
-                  : 'Solo tú y quienes marques pueden pausar, adelantar y cambiar la cola.'}
-              </span>
+              <strong>{t.people.everyoneControls}</strong>
+              <span>{openControl ? t.people.openOn : t.people.openOff}</span>
             </div>
-            <Switch checked={openControl} onChange={onSetOpenControl} label="Todos controlan el video" />
+            <Switch checked={openControl} onChange={onSetOpenControl} label={t.people.everyoneControls} />
           </div>
         </div>
       ) : (
         <div className={`perm-card ${myRole === 'viewer' && !openControl ? 'viewer' : ''}`}>
           {openControl || myRole === 'control' ? (
             <p className="perm-status">
-              <span className="here" /> Tienes el control del video.
+              <span className="here" /> {t.people.youHaveControl}
             </p>
           ) : (
             <div className="perm-row">
               <div className="perm-text">
-                <strong>Solo miras</strong>
-                <span>{hostName ? `${hostName} maneja el video.` : 'El anfitrión maneja el video.'}</span>
+                <strong>{t.people.justWatching}</strong>
+                <span>{hostName ? t.people.hostDrives(hostName) : t.people.hostDrivesAnon}</span>
               </div>
               <button className="btn soft small" onClick={onRequestControl}>
                 <IconHand size={14} />
-                Pedir el control
+                {t.people.askControl}
               </button>
             </div>
           )}
@@ -74,7 +73,7 @@ export default function PeoplePanel({
       )}
 
       <div className="panel-head">
-        <h2>En la sala</h2>
+        <h2>{t.people.inRoom}</h2>
         <span className="panel-count">{participants.length}</span>
       </div>
 
@@ -86,7 +85,7 @@ export default function PeoplePanel({
               <span className="avatar lg" style={{ background: avatarColor(p.name) }}>
                 {initials(p.name)}
                 {p.role === 'host' && (
-                  <span className="crown" title="Anfitrión">
+                  <span className="crown" title={t.people.roleHost}>
                     <IconCrown size={10} />
                   </span>
                 )}
@@ -94,14 +93,14 @@ export default function PeoplePanel({
               <span className="people-info">
                 <span className="people-name">
                   {p.name}
-                  {mine && <span className="you"> (tú)</span>}
+                  {mine && <span className="you"> {t.people.you}</span>}
                 </span>
                 <span className="people-role">
                   {p.role === 'host'
-                    ? 'Anfitrión'
+                    ? t.people.roleHost
                     : p.role === 'control' || openControl
-                      ? 'Con control'
-                      : 'Mirando'}
+                      ? t.people.roleControl
+                      : t.people.roleViewer}
                 </span>
               </span>
               {isHost && p.role !== 'host' ? (
@@ -109,10 +108,10 @@ export default function PeoplePanel({
                   checked={p.role === 'control' || openControl}
                   disabled={openControl}
                   onChange={(on) => onGrant(p.id, on)}
-                  label={`Control para ${p.name}`}
+                  label={t.people.controlFor(p.name)}
                 />
               ) : (
-                <span className="here" title="Conectado" />
+                <span className="here" title={t.people.connected} />
               )}
             </li>
           );
@@ -122,11 +121,11 @@ export default function PeoplePanel({
       {participants.length <= 1 && (
         <div className="invite-card">
           <p>
-            Esto se disfruta más en compañía. Comparte el código <b>{code}</b> o manda el enlace directo.
+            <Rich parts={t.people.invite(<b>{code}</b>)} />
           </p>
           <button className="btn soft" onClick={onInvite}>
             <IconShare size={14} />
-            Invitar a alguien
+            {t.people.inviteSomeone}
           </button>
         </div>
       )}
@@ -139,21 +138,25 @@ export default function PeoplePanel({
         }}
       >
         <label className="field">
-          <span>Cómo te ven los demás</span>
+          <span>{t.people.renameLabel}</span>
           <div className="input-row">
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               maxLength={24}
-              placeholder="Tu nombre"
-              aria-label="Tu nombre"
+              placeholder={t.people.yourName}
+              aria-label={t.people.yourName}
             />
             <button className="btn primary" disabled={!dirty}>
               <IconPencil />
-              Guardar
+              {t.people.save}
             </button>
           </div>
         </label>
+        <div className="lang-row">
+          <span>{t.language}</span>
+          <LangSwitch />
+        </div>
       </form>
     </div>
   );

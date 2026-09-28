@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { DriveMedia, VideoItem } from '../../shared/protocol';
+import { useI18n } from '../i18n';
 import { fetchTitle, fmtBytes, parseDriveFileId, parseVideoId } from '../lib/util';
 import { IconDrive, IconFilm, IconLink, IconLock, IconPlay, IconPlus, IconX } from './icons';
 
@@ -14,13 +15,6 @@ type Props = {
   onRequestControl(): void;
 };
 
-const DRIVE_ERRORS: Record<string, string> = {
-  MEDIA_NOT_FOUND: 'No se pudo acceder al archivo. ¿Está compartido como "Cualquiera con el enlace"?',
-  DRIVE_QUOTA: 'Google limitó las descargas de este archivo por hoy (demasiado tráfico). Prueba mañana.',
-  FILE_TOO_LARGE: 'El archivo supera el límite de tamaño del servidor.',
-  MEDIA_UNREACHABLE: 'No se pudo contactar a Google Drive. Intenta de nuevo.',
-};
-
 export default function QueuePanel({
   queue,
   currentVideoId,
@@ -31,6 +25,7 @@ export default function QueuePanel({
   canControl,
   onRequestControl,
 }: Props) {
+  const { t } = useI18n();
   const [input, setInput] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -52,9 +47,9 @@ export default function QueuePanel({
         };
         if (!r.ok) {
           if (r.status === 413 && j.limitMb) {
-            setErr(`El archivo pesa más de ${j.limitMb} MB, el límite del servidor.`);
+            setErr(t.queue.tooLarge(j.limitMb));
           } else {
-            setErr(DRIVE_ERRORS[j.error ?? ''] ?? 'No se pudo resolver el archivo de Drive.');
+            setErr(t.queue.driveErrors[j.error ?? ''] ?? t.queue.driveGeneric);
           }
           return;
         }
@@ -65,7 +60,7 @@ export default function QueuePanel({
 
       const vid = parseVideoId(raw);
       if (!vid) {
-        setErr('Pega un enlace de YouTube o de Google Drive (público).');
+        setErr(t.queue.badLink);
         return;
       }
       const title = await fetchTitle(vid);
@@ -81,9 +76,9 @@ export default function QueuePanel({
       {!canControl && (
         <div className="locked-note">
           <IconLock size={15} />
-          <span>Solo quien tiene el control puede cambiar la cola.</span>
+          <span>{t.queue.locked}</span>
           <button className="btn soft small" onClick={onRequestControl}>
-            Pedir
+            {t.queue.ask}
           </button>
         </div>
       )}
@@ -103,13 +98,13 @@ export default function QueuePanel({
                 setInput(e.target.value);
                 if (err) setErr(null);
               }}
-              placeholder="Enlace de YouTube o Drive"
+              placeholder={t.queue.placeholder}
               inputMode="url"
-              aria-label="Enlace de YouTube o Google Drive"
+              aria-label={t.queue.inputLabel}
             />
             <button className="btn primary" disabled={busy || !input.trim()}>
-              {busy ? <span className="spinner" aria-label="Añadiendo" /> : <IconPlus size={16} />}
-              <span>Añadir</span>
+              {busy ? <span className="spinner" aria-label={t.queue.adding} /> : <IconPlus size={16} />}
+              <span>{t.queue.add}</span>
             </button>
           </div>
           {err && (
@@ -121,7 +116,7 @@ export default function QueuePanel({
       )}
 
       <div className="panel-head">
-        <h2>A continuación</h2>
+        <h2>{t.queue.upNext}</h2>
         {queue.length > 0 && <span className="panel-count">{queue.length}</span>}
       </div>
 
@@ -131,11 +126,8 @@ export default function QueuePanel({
             <span className="empty-art" aria-hidden="true">
               <IconFilm size={22} />
             </span>
-            <strong>La cola está vacía</strong>
-            <span>
-              Añade videos de YouTube o archivos públicos de Google Drive (hasta 500 MB). Se reproducen solos, uno tras
-              otro.
-            </span>
+            <strong>{t.queue.emptyTitle}</strong>
+            <span>{t.queue.emptyBody}</span>
           </li>
         )}
         {queue.map((item, i) => (
@@ -158,15 +150,15 @@ export default function QueuePanel({
               <span className="queue-by">
                 {item.media
                   ? `Drive · ${item.addedBy ?? '?'}${item.media.size ? ` · ${fmtBytes(item.media.size)}` : ''}`
-                  : `Añadido por ${item.addedBy ?? '?'}`}
+                  : t.queue.addedBy(item.addedBy ?? '?')}
               </span>
             </div>
             {canControl && (
               <div className="queue-actions">
-                <button className="icon-btn" onClick={() => onJump(i)} aria-label="Reproducir ahora" title="Reproducir ahora">
+                <button className="icon-btn" onClick={() => onJump(i)} aria-label={t.queue.playNow} title={t.queue.playNow}>
                   <IconPlay size={14} />
                 </button>
-                <button className="icon-btn" onClick={() => onRemove(i)} aria-label="Quitar de la cola" title="Quitar">
+                <button className="icon-btn" onClick={() => onRemove(i)} aria-label={t.queue.remove} title={t.queue.removeShort}>
                   <IconX />
                 </button>
               </div>

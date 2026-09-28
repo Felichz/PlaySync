@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatMedia, ChatMessage, DriveMedia, Participant, RoomState } from '../../shared/protocol';
+import { useI18n } from '../i18n';
 import { SyncClient, type ConnStatus } from '../lib/sync';
-import { getClientId, isEmojiOnly } from '../lib/util';
+import { getClientId, isEmojiOnly, setLS } from '../lib/util';
 
 export type RoomActions = {
   load(videoId: string, title?: string, autoplay?: boolean): void;
@@ -33,12 +34,16 @@ export type ControlRequest = { id: string; name: string; at: number };
 const FLOAT_MS = 5600;
 
 export function useRoom(code: string, initialName: string) {
+  const { t } = useI18n();
+  // Read through a ref so switching language never reconnects the socket.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [status, setStatus] = useState<ConnStatus>('connecting');
   const [state, setState] = useState<RoomState | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [me, setMe] = useState('');
-  const [name, setName] = useState(initialName || 'Invitado');
+  const [name, setName] = useState(initialName || t.guest);
   const [sync, setSync] = useState<SyncClient | null>(null);
   const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
   const [floaters, setFloaters] = useState<Floater[]>([]);
@@ -107,7 +112,7 @@ export function useRoom(code: string, initialName: string) {
           setRequests((rs) => [...rs.filter((r) => r.id !== m.id), { id: m.id, name: m.name, at: Date.now() }]);
           break;
         case 'error':
-          showToast(m.message);
+          showToast(tRef.current.errors[m.code] ?? tRef.current.errors.unknown);
           break;
       }
     };
@@ -134,9 +139,10 @@ export function useRoom(code: string, initialName: string) {
       sendChat: (text) => sync?.send({ type: 'chat', text }),
       sendMedia: (media) => sync?.send({ type: 'chat', text: '', media }),
       rename: (n) => {
-        const clean = n.trim().slice(0, 24) || 'Invitado';
+        const clean = n.trim().slice(0, 24) || tRef.current.guest;
         setName(clean);
         nameRef.current = clean;
+        setLS('playsync.name', clean);
         sync?.send({ type: 'rename', name: clean });
       },
       grant: (id, control) => {

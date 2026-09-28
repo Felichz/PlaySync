@@ -5,11 +5,12 @@ import { getLS, setLS } from './util';
 const cache = new Map<string, { at: number; items: SearchResult[] }>();
 const TTL = 10 * 60_000;
 
-export async function searchYouTube(q: string, signal?: AbortSignal): Promise<SearchResult[]> {
-  const key = q.trim().toLowerCase();
+/** `lang` picks the language of the results' metadata (view counts, dates). */
+export async function searchYouTube(q: string, lang: 'en' | 'es', signal?: AbortSignal): Promise<SearchResult[]> {
+  const key = `${lang}:${q.trim().toLowerCase()}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.items;
-  const r = await fetch(`/api/youtube/search?q=${encodeURIComponent(q.trim())}`, { signal });
+  const r = await fetch(`/api/youtube/search?q=${encodeURIComponent(q.trim())}&hl=${lang}`, { signal });
   if (!r.ok) throw new Error('YT_SEARCH_FAILED');
   const j = (await r.json()) as { items?: SearchResult[] };
   const items = j.items ?? [];

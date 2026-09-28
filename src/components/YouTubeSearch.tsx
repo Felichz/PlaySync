@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SearchResult } from '../../shared/protocol';
+import { useI18n } from '../i18n';
 import { fetchTitle, parseVideoId } from '../lib/util';
 import { addRecentSearch, getRecentSearches, searchYouTube } from '../lib/ytsearch';
 import { IconPlay, IconPlus, IconReplay, IconSearch, IconX } from './icons';
@@ -19,6 +20,9 @@ let lastQuery = '';
 
 /** "What do we watch?": YouTube search that takes over the screen for people with control. */
 export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onReplay }: Props) {
+  const { t, lang } = useI18n();
+  const fallbackTitle = useRef(t.search.youtubeVideo);
+  fallbackTitle.current = t.search.youtubeVideo;
   const [q, setQ] = useState(lastQuery);
   const [query, setQuery] = useState(lastQuery);
   const [items, setItems] = useState<SearchResult[] | null>(null);
@@ -55,9 +59,9 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
       const direct = parseVideoId(query);
       if (direct) {
         const title = await fetchTitle(direct);
-        return [{ videoId: direct, title: title ?? 'Video de YouTube' }];
+        return [{ videoId: direct, title: title ?? fallbackTitle.current }];
       }
-      return searchYouTube(query, ctrl.signal);
+      return searchYouTube(query, lang, ctrl.signal);
     })()
       .then((r) => {
         if (ctrl.signal.aborted) return;
@@ -74,7 +78,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
         if (!ctrl.signal.aborted) setLoading(false);
       });
     return () => ctrl.abort();
-  }, [query]);
+  }, [query, lang]);
 
   const queue = (it: SearchResult) => {
     onQueue(it.videoId, it.title);
@@ -86,14 +90,14 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
       <div className="yts-head">
         {endedTitle ? (
           <div className="yts-ended">
-            <span className="yts-kicker">Terminó</span>
+            <span className="yts-kicker">{t.search.finished}</span>
             <span className="yts-ended-title" title={endedTitle}>
               {endedTitle}
             </span>
             {onReplay && (
               <button type="button" className="btn ghost small" onClick={onReplay}>
                 <IconReplay size={14} />
-                Volver a ver
+                {t.search.watchAgain}
               </button>
             )}
           </div>
@@ -103,7 +107,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
             {notice}
           </p>
         )}
-        <h2>{endedTitle ? '¿Y ahora qué vemos?' : '¿Qué vemos?'}</h2>
+        <h2>{endedTitle ? t.search.headingAfter : t.search.heading}</h2>
         <form
           className="yts-field"
           role="search"
@@ -118,13 +122,13 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Busca en YouTube o pega un enlace"
-            aria-label="Buscar en YouTube"
+            placeholder={t.search.placeholder}
+            aria-label={t.search.label}
             enterKeyHint="search"
             maxLength={100}
           />
           {q && (
-            <button type="button" className="icon-btn" onClick={() => setQ('')} aria-label="Borrar búsqueda">
+            <button type="button" className="icon-btn" onClick={() => setQ('')} aria-label={t.search.clear}>
               <IconX />
             </button>
           )}
@@ -134,7 +138,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
       <div className="yts-body">
         {!items && !loading && !error && recents.length > 0 && (
           <div className="yts-recents">
-            <span className="picker-section">Búsquedas recientes</span>
+            <span className="picker-section">{t.search.recent}</span>
             <div className="chips">
               {recents.map((r) => (
                 <button key={r} type="button" className="chip" onClick={() => setQ(r)}>
@@ -146,7 +150,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
         )}
 
         {loading && (
-          <div className="yts-grid" aria-busy="true" aria-label="Buscando">
+          <div className="yts-grid" aria-busy="true" aria-label={t.search.searching}>
             {Array.from({ length: 8 }, (_, i) => (
               <div key={i} className="yts-card skeleton">
                 <span className="yts-thumb" />
@@ -158,11 +162,11 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
         )}
 
         {error && !loading && (
-          <p className="picker-hint">No pudimos buscar en YouTube ahora mismo. Prueba de nuevo o pega un enlace.</p>
+          <p className="picker-hint">{t.search.error}</p>
         )}
 
         {items && !loading && items.length === 0 && (
-          <p className="picker-hint">Nada por aquí. Prueba con otras palabras.</p>
+          <p className="picker-hint">{t.search.empty}</p>
         )}
 
         {items && !loading && items.length > 0 && (
@@ -184,11 +188,11 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
                   type="button"
                   className={`yts-queue ${queued.has(it.videoId) ? 'done' : ''}`}
                   onClick={() => queue(it)}
-                  aria-label={`Añadir a la cola: ${it.title}`}
-                  title="Añadir a la cola"
+                  aria-label={t.search.addToQueueNamed(it.title)}
+                  title={t.search.addToQueue}
                 >
                   <IconPlus size={15} />
-                  <span>{queued.has(it.videoId) ? 'En cola' : 'Cola'}</span>
+                  <span>{queued.has(it.videoId) ? t.search.queued : t.search.queue}</span>
                 </button>
               </div>
             ))}
@@ -196,7 +200,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
         )}
 
         {!items && !loading && !error && recents.length === 0 && (
-          <p className="picker-hint">Busca lo que quieran ver: se reproduce para todos a la vez.</p>
+          <p className="picker-hint">{t.search.hint}</p>
         )}
       </div>
     </div>

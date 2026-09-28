@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useI18n } from '../i18n';
 import { randomCode } from '../lib/util';
 import { IconArrow, IconPause, IconReturn, Logo } from './icons';
+import LangSwitch from './LangSwitch';
 
 type Props = {
   initialName: string;
@@ -9,10 +11,11 @@ type Props = {
 };
 
 export default function Landing({ initialName, lastRoom, onJoin }: Props) {
+  const { t } = useI18n();
   const [name, setName] = useState(initialName);
   const [code, setCode] = useState('');
   const cleanCode = code.replace(/[^A-Z0-9]/g, '');
-  const who = () => name.trim() || 'Invitado';
+  const who = () => name.trim() || t.guest;
 
   const join = () => {
     if (cleanCode.length < 4) return;
@@ -26,38 +29,36 @@ export default function Landing({ initialName, lastRoom, onJoin }: Props) {
       <header className="landing-top">
         <Logo size={30} />
         <span className="wordmark">PlaySync</span>
+        <LangSwitch className="landing-lang" />
       </header>
 
       <main className="landing-main">
         <section className="landing-copy">
           <h1>
-            Mismo video.
+            {t.landing.headline}
             <br />
-            <span>Mismo segundo.</span>
+            <span>{t.landing.headlineAccent}</span>
           </h1>
-          <p className="sub">
-            Crea una sala, comparte el código y vean YouTube o Google Drive sincronizados mientras charlan. Como en el
-            mismo sofá, aunque estén lejos.
-          </p>
+          <p className="sub">{t.landing.sub}</p>
 
           <div className="entry">
             <label className="field">
-              <span>¿Cómo te llamas?</span>
+              <span>{t.landing.nameLabel}</span>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={24}
-                placeholder="Invitado"
+                placeholder={t.guest}
                 autoComplete="nickname"
               />
             </label>
 
             <button className="btn primary big" onClick={() => onJoin(randomCode(), who())}>
-              Crear una sala
+              {t.landing.create}
               <IconArrow />
             </button>
 
-            <div className="or">o entra con un código</div>
+            <div className="or">{t.landing.or}</div>
 
             <form
               className="join-row"
@@ -71,21 +72,21 @@ export default function Landing({ initialName, lastRoom, onJoin }: Props) {
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 maxLength={12}
-                placeholder="CÓDIGO"
+                placeholder={t.landing.codePlaceholder}
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
-                aria-label="Código de sala"
+                aria-label={t.landing.codeLabel}
               />
               <button className="btn ghost big" disabled={cleanCode.length < 4}>
-                Entrar
+                {t.landing.join}
               </button>
             </form>
 
             {lastRoom && (
               <button className="rejoin" onClick={() => onJoin(lastRoom, who())}>
                 <IconReturn />
-                Volver a tu última sala
+                {t.landing.rejoin}
                 <b>{lastRoom}</b>
               </button>
             )}
@@ -96,9 +97,9 @@ export default function Landing({ initialName, lastRoom, onJoin }: Props) {
       </main>
 
       <footer className="landing-foot">
-        <span>Sin cuentas</span>
-        <span>En cualquier navegador</span>
-        <span>Se instala como app</span>
+        <span>{t.landing.footAccounts}</span>
+        <span>{t.landing.footBrowsers}</span>
+        <span>{t.landing.footInstall}</span>
       </footer>
     </div>
   );
@@ -106,6 +107,7 @@ export default function Landing({ initialName, lastRoom, onJoin }: Props) {
 
 /** Two screens in two cities, one playhead: the product's promise, shown. */
 function SyncScene() {
+  const { t } = useI18n();
   return (
     <div className="scene" aria-hidden="true">
       <div className="screen laptop">
@@ -125,8 +127,8 @@ function SyncScene() {
         <SceneVideo />
         <SceneTransport time="12:48" />
         <div className="phone-chat">
-          <p className="them">¿Le damos play? 🍿</p>
-          <p className="me">¡Dale! Ya está 💛</p>
+          <p className="them">{t.landing.sceneThem}</p>
+          <p className="me">{t.landing.sceneMe}</p>
         </div>
       </div>
 
@@ -136,7 +138,7 @@ function SyncScene() {
           <i />
           <i />
         </span>
-        En sincronía
+        {t.landing.sceneSync}
       </div>
     </div>
   );

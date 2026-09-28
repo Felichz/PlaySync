@@ -9,10 +9,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'PlaySync — Mira YouTube juntos',
+        name: 'PlaySync · Watch YouTube together',
         short_name: 'PlaySync',
-        description: 'Mira videos de YouTube sincronizados con quien quieras, desde cualquier dispositivo.',
-        lang: 'es',
+        description: 'Watch YouTube videos in sync with the people you care about, from any device.',
+        lang: 'en',
         start_url: '/',
         scope: '/',
         display: 'standalone',

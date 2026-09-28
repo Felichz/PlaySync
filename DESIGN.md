@@ -40,8 +40,10 @@ video's own colors spilling into the space behind everything.
 
 ## Signature elements
 
-- **Screen light (ambient):** the playing YouTube thumbnail, blurred wide behind the whole room
-  (`.ambient` in `Room.tsx`), brighter while playing, crossfading on video change. Drive files
+- **Screen light (ambient):** what's on screen, blurred wide behind the whole room
+  (`Ambient.tsx`). It follows the video through YouTube's storyboard (the seek-preview sprite,
+  one frame every 2–5 s, nearest frame to the room's position), crossfading 1.8 s between frames
+  and brighter while playing. The static thumbnail sits underneath as the fallback. Drive files
   and the empty room fall back to warm rose/apricot/plum radial light.
 - **Ticket:** the room code is a punched cinema ticket (masked notches, dashed perforation,
   connection dot on the stub); click copies the code.
