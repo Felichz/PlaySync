@@ -6,7 +6,10 @@ Watch YouTube or a public Google Drive video in sync with people on other device
 
 > The demo runs on a free Render instance that sleeps when idle, so the first load can take up to a minute.
 
-<img src="docs/screenshots/playsync-main.webp" width="100%" alt="PlaySync room on a desktop, as the host: Big Buck Bunny playing with custom controls, the room code in a ticket-shaped badge, a 'Watching together' status chip, two avatars, and a chat between Felix and Sofi in the side panel.">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/playsync-demo-dark.webp">
+  <img src="docs/screenshots/playsync-demo-light.webp" width="100%" alt="Recording of a PlaySync room on a desktop, as the host: Big Buck Bunny playing with custom controls, the room code in a ticket-shaped badge and a 'Watching together' status chip. Sofi's message arrives, the host types a reply, and Sofi's popcorn reaction floats up over the video.">
+</picture>
 
 ## What it is
 
@@ -17,14 +20,23 @@ YouTube video never passes through the server. Each client plays the official Yo
 <table>
   <tr>
     <td width="260" valign="top">
-      <img src="docs/screenshots/playsync-mobile.webp" width="260" alt="The same room on a guest's phone, captured in the same session: the video, a lock on the play button, a 'Just watching · Ask for control' pill, the same chat, and a bottom tab bar with Chat, Queue and People.">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/playsync-mobile-dark.webp">
+        <img src="docs/screenshots/playsync-mobile-light.webp" width="260" alt="A room on a guest's phone: the video, a lock on the play button, a 'Just watching · Ask for control' pill, the same chat, and a bottom tab bar with Chat, Queue and People.">
+      </picture>
       <br><sub>The same room on the guest's phone. Guests watch by default and can ask the host for control.</sub>
     </td>
     <td valign="top">
-      <img src="docs/screenshots/playsync-search.webp" width="480" alt="YouTube search inside the player: a 'What should we watch?' search box with the query 'blender open movie' and a grid of video results with thumbnails, durations, channels and view counts. The queue panel on the right is empty.">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/playsync-search-dark.webp">
+        <img src="docs/screenshots/playsync-search-light.webp" width="480" alt="YouTube search inside the player: a 'What should we watch?' search box with the query 'blender open movie' and a grid of video results with thumbnails, durations, channels and view counts. The queue panel on the right is empty.">
+      </picture>
       <br><sub>Search replaces the player when nothing is playing. No API key needed.</sub>
       <br><br>
-      <img src="docs/screenshots/playsync-landing.webp" width="480" alt="Landing page with the headline 'Same video. Same second.', a name field, a 'Create a room' button, a room code field, and an illustration of a laptop in Madrid and a phone in Bogotá playing the same frame.">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/playsync-landing-dark.webp">
+        <img src="docs/screenshots/playsync-landing-light.webp" width="480" alt="Landing page with the headline 'Same video. Same second.', a name field, a 'Create a room' button, a room code field, and an illustration of a laptop in Madrid and a phone in Bogotá playing the same frame.">
+      </picture>
       <br><sub>Landing: pick a name, create a room or join with a code.</sub>
     </td>
   </tr>
@@ -43,6 +55,7 @@ YouTube video never passes through the server. Each client plays the official Yo
 - **Name prompt**: someone who opens a room link without a name is asked for one on arrival, and can skip as Guest.
 - **Custom controls** (YouTube's own chrome is hidden) and a "tap to join with sound" overlay when the browser blocks autoplay, as iOS does.
 - **Installable PWA** with a manifest, an auto-updating service worker and generated icons.
+- **Light and dark themes**: the system setting by default, with a switch next to the language one. In daylight the player keeps its dark frame, like a screen in a lit room.
 - **Responsive layout**: bottom tab bar on phones; video and a side panel next to each other from 940px wide, or in landscape from 520px.
 
 ## How sync works
