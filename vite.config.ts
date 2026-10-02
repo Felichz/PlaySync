@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // Not when built to be embedded under another site (the portfolio): no service worker there.
+      disable: !!process.env.PLAYSYNC_EMBED,
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {

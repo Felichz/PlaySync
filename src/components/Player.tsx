@@ -261,6 +261,12 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
               loadedRef.current = stateRef.current?.videoId ?? null;
               try {
                 player.setVolume(volRef.current);
+                // Embedded in another page (the portfolio shows the app live in a frame), the video
+                // starts muted, which browsers let play without a tap; the volume button unmutes it.
+                if (window !== window.top) {
+                  player.mute();
+                  setMuted(true);
+                }
               } catch {
                 /* noop */
               }
