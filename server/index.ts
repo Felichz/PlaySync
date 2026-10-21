@@ -54,7 +54,7 @@ type Room = {
   id: string;
   videoId: string | null; // YouTube source
   videoTitle: string | null;
-  media: DriveMedia | null; // Drive source (takes precedence when set)
+  media: DriveMedia | null; // file source (takes precedence when set)
   isPlaying: boolean;
   position: number; // segundos, base en lastUpdatedAt
   lastUpdatedAt: number; // reloj del servidor
@@ -220,17 +220,30 @@ function cleanName(input: unknown): string {
 // Only allow media hosted by the provider we front (blocks arbitrary image embedding).
 const MEDIA_HOST_RE = /(^|\.)giphy\.com$/;
 
+/** A direct link to a video file (http/https, at most 1000 chars), or undefined. */
+function normMediaUrl(input: unknown): string | undefined {
+  if (typeof input !== 'string' || input.length > 1000) return undefined;
+  try {
+    const u = new URL(input);
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function normDriveMedia(input: unknown): DriveMedia | undefined {
   if (!input || typeof input !== 'object') return undefined;
   const raw = input as Record<string, unknown>;
-  if (typeof raw.fileId !== 'string' || !/^[-\w]{10,}$/.test(raw.fileId)) return undefined;
+  const fileId = typeof raw.fileId === 'string' && /^[-\w]{10,}$/.test(raw.fileId) ? raw.fileId : undefined;
+  const url = fileId ? undefined : normMediaUrl(raw.url);
+  if (!fileId && !url) return undefined;
   const size =
     typeof raw.size === 'number' && Number.isFinite(raw.size) && raw.size > 0
       ? Math.round(raw.size)
       : undefined;
   const name =
     typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 200) : undefined;
-  return { fileId: raw.fileId, name, size };
+  return fileId ? { fileId, name, size } : { url, name, size };
 }
 
 function normMedia(input: unknown): ChatMedia | undefined {
@@ -553,7 +566,7 @@ const server = http.createServer((req, res) => {
         rooms: [...rooms.values()].map((r) => ({
           id: r.id,
           videoId: r.videoId,
-          media: r.media?.fileId ?? null,
+          media: r.media?.fileId ?? r.media?.url ?? null,
           playing: r.isPlaying,
           pos: Math.round(r.position),
           viewers: r.participants.size,
@@ -959,7 +972,7 @@ async function serveYouTubeSearch(url: URL, res: http.ServerResponse): Promise<v
 
 type ResolvedMedia = { url: string; size: number | null; type: string };
 
-const MAX_MEDIA_MB = Number(process.env.MAX_MEDIA_MB ?? 500);
+const MAX_MEDIA_MB = Number(process.env.MAX_MEDIA_MB ?? 3000);
 const MEDIA_TTL = 30 * 60_000;
 const mediaCache = new Map<string, { at: number; res: ResolvedMedia }>();
 

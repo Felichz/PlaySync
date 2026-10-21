@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RoomState } from '../../shared/protocol';
+import type { DriveMedia, RoomState } from '../../shared/protocol';
 import { effectivePosition, type SyncClient } from '../lib/sync';
 import { loadYT, YT_STATE, type YTPlayer } from '../lib/yt';
+import { mediaSourceLabel, mediaSrc } from '../lib/media';
 import { fmtBytes, fmtTime, getLS, setLS } from '../lib/util';
 import type { Floater } from '../hooks/useRoom';
 import { useI18n } from '../i18n';
-import { IconDrive, IconFull, IconHand, IconLock, IconMute, IconPause, IconPlay, IconVolume } from './icons';
+import { IconDrive, IconFilm, IconFull, IconHand, IconLock, IconMute, IconPause, IconPlay, IconVolume } from './icons';
 import YouTubeSearch from './YouTubeSearch';
 
 type Props = {
@@ -15,12 +16,24 @@ type Props = {
   floaters: Floater[];
   onLoad(videoId: string, title?: string): void;
   onQueueAdd(videoId: string, title?: string): void;
+  onLoadMedia(media: DriveMedia): void;
+  onQueueAddMedia(media: DriveMedia): void;
   onRequestControl(): void;
 };
 
 type Pending = { until: number; isPlaying?: boolean; position?: number };
 
-export default function Player({ sync, state, canControl, floaters, onLoad, onQueueAdd, onRequestControl }: Props) {
+export default function Player({
+  sync,
+  state,
+  canControl,
+  floaters,
+  onLoad,
+  onQueueAdd,
+  onLoadMedia,
+  onQueueAddMedia,
+  onRequestControl,
+}: Props) {
   const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -203,6 +216,11 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
 
   // Drive mode takes over: tear down the YT iframe while it is active.
   const hasMedia = !!state?.media;
+  const mediaKey = state?.media ? mediaSrc(state.media) : null;
+  // A new file gets a fresh chance: the last one's load error does not carry over.
+  useEffect(() => {
+    if (mediaKey) setError(null);
+  }, [mediaKey]);
   useEffect(() => {
     if (!hasMedia) return;
     const p = playerRef.current;
@@ -487,7 +505,8 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
           <video
             ref={videoRef}
             className="html-video"
-            src={`/api/media/${state?.media?.fileId ?? ''}`}
+            key={mediaKey ?? ''}
+            src={mediaKey ?? ''}
             playsInline
             preload="auto"
             onLoadedMetadata={(e) => {
@@ -536,6 +555,8 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
             notice={embedBlocked ? t.player.embedBlocked(title ?? undefined) : null}
             onPlay={onLoad}
             onQueue={onQueueAdd}
+            onPlayMedia={onLoadMedia}
+            onQueueMedia={onQueueAddMedia}
             onReplay={userPlay}
           />
         )}
@@ -583,7 +604,7 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
 
         {error && !showSearch && (
           <div className="player-error" role="alert">
-            {error === 'embed' ? t.player.embedError : t.player.driveError}
+            {error === 'embed' ? t.player.embedError : state?.media?.url ? t.player.linkError : t.player.driveError}
           </div>
         )}
 
@@ -653,8 +674,10 @@ export default function Player({ sync, state, canControl, floaters, onLoad, onQu
       {title && (
         <div className="now-playing">
           <span className="np-source">
-            {hasMedia ? <IconDrive size={14} /> : <IconYouTube />}
-            {hasMedia ? `Google Drive${state?.media?.size ? ` · ${fmtBytes(state.media.size)}` : ''}` : 'YouTube'}
+            {state?.media ? state.media.url ? <IconFilm size={14} /> : <IconDrive size={14} /> : <IconYouTube />}
+            {state?.media
+              ? `${mediaSourceLabel(state.media)}${state.media.size ? ` · ${fmtBytes(state.media.size)}` : ''}`
+              : 'YouTube'}
           </span>
           <h1 className="np-title" title={title}>
             {title}

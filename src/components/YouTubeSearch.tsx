@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import type { SearchResult } from '../../shared/protocol';
+import type { DriveMedia, SearchResult } from '../../shared/protocol';
 import { useI18n } from '../i18n';
-import { fetchTitle, parseVideoId } from '../lib/util';
+import { mediaSourceLabel, resolveMediaLinks } from '../lib/media';
+import { fetchTitle, fmtBytes, parseVideoId } from '../lib/util';
 import { addRecentSearch, getRecentSearches, searchYouTube } from '../lib/ytsearch';
-import { IconPlay, IconPlus, IconReplay, IconSearch, IconX } from './icons';
+import { IconDrive, IconFilm, IconPlay, IconPlus, IconReplay, IconSearch, IconX } from './icons';
 
 type Props = {
   /** Title of the video that just finished, when the search replaces an ended player. */
@@ -12,20 +13,30 @@ type Props = {
   notice?: string | null;
   onPlay(videoId: string, title?: string): void;
   onQueue(videoId: string, title?: string): void;
+  onPlayMedia(media: DriveMedia): void;
+  onQueueMedia(media: DriveMedia): void;
   onReplay?(): void;
 };
 
 // The search survives the player swapping it out (a video starts, fails or ends).
 let lastQuery = '';
 
-/** "What do we watch?": YouTube search that takes over the screen for people with control. */
-export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onReplay }: Props) {
+/**
+ * "What do we watch?": YouTube search that takes over the screen for people with control.
+ * A pasted Drive link or direct video links (a movie in parts) show those files instead.
+ */
+export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onPlayMedia, onQueueMedia, onReplay }: Props) {
   const { t, lang } = useI18n();
   const fallbackTitle = useRef(t.search.youtubeVideo);
   fallbackTitle.current = t.search.youtubeVideo;
+  const tRef = useRef(t);
+  tRef.current = t;
   const [q, setQ] = useState(lastQuery);
   const [query, setQuery] = useState(lastQuery);
   const [items, setItems] = useState<SearchResult[] | null>(null);
+  const [files, setFiles] = useState<DriveMedia[] | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [filesQueued, setFilesQueued] = useState<Set<number>>(() => new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [recents, setRecents] = useState(getRecentSearches);
@@ -45,6 +56,9 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
 
   useEffect(() => {
     lastQuery = query;
+    setFiles(null);
+    setFileError(null);
+    setFilesQueued(new Set());
     if (query.length < 2) {
       setItems(null);
       setError(false);
@@ -55,6 +69,13 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
     setLoading(true);
     setError(false);
     (async () => {
+      // A pasted Drive or direct link resolves to those files, not to a search.
+      const linked = await resolveMediaLinks(query, tRef.current);
+      if (linked) {
+        if ('error' in linked) setFileError(linked.error);
+        else setFiles(linked.media);
+        return null;
+      }
       // A pasted link resolves to exactly that video.
       const direct = parseVideoId(query);
       if (direct) {
@@ -66,7 +87,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
       .then((r) => {
         if (ctrl.signal.aborted) return;
         setItems(r);
-        if (!parseVideoId(query)) {
+        if (r && !parseVideoId(query)) {
           addRecentSearch(query);
           setRecents(getRecentSearches());
         }
@@ -125,7 +146,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
             placeholder={t.search.placeholder}
             aria-label={t.search.label}
             enterKeyHint="search"
-            maxLength={100}
+            maxLength={1000}
           />
           {q && (
             <button type="button" className="icon-btn" onClick={() => setQ('')} aria-label={t.search.clear}>
@@ -136,7 +157,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
       </div>
 
       <div className="yts-body">
-        {!items && !loading && !error && recents.length > 0 && (
+        {!items && !files && !fileError && !loading && !error && recents.length > 0 && (
           <div className="yts-recents">
             <span className="picker-section">{t.search.recent}</span>
             <div className="chips">
@@ -159,6 +180,67 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
               </div>
             ))}
           </div>
+        )}
+
+        {fileError && !loading && (
+          <p className="picker-hint" role="alert">
+            {fileError}
+          </p>
+        )}
+
+        {files && !loading && (
+          <>
+            {files.length > 1 && (
+              <div className="yts-parts">
+                <span className="picker-section">{t.search.parts(files.length)}</span>
+                <button
+                  type="button"
+                  className="btn primary small"
+                  onClick={() => {
+                    // The first part plays now; the rest wait in the queue, in order.
+                    onPlayMedia(files[0]);
+                    files.slice(1).forEach(onQueueMedia);
+                  }}
+                >
+                  <IconPlay size={14} />
+                  {t.search.playAll}
+                </button>
+              </div>
+            )}
+            <div className="yts-grid">
+              {files.map((file, i) => (
+                <div key={file.url ?? file.fileId} className="yts-card">
+                  <button type="button" className="yts-main" onClick={() => onPlayMedia(file)}>
+                    <span className="yts-thumb">
+                      <span className="file" aria-hidden="true">
+                        {file.url ? <IconFilm size={28} /> : <IconDrive size={28} />}
+                      </span>
+                      <span className="yts-play" aria-hidden="true">
+                        <IconPlay size={18} />
+                      </span>
+                    </span>
+                    <span className="yts-title">{file.name ?? t.search.file}</span>
+                    <span className="yts-meta">
+                      {[mediaSourceLabel(file), file.size ? fmtBytes(file.size) : ''].filter(Boolean).join(' · ')}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`yts-queue ${filesQueued.has(i) ? 'done' : ''}`}
+                    onClick={() => {
+                      onQueueMedia(file);
+                      setFilesQueued((s) => new Set(s).add(i));
+                    }}
+                    aria-label={t.search.addToQueueNamed(file.name ?? t.search.file)}
+                    title={t.search.addToQueue}
+                  >
+                    <IconPlus size={15} />
+                    <span>{filesQueued.has(i) ? t.search.queued : t.search.queue}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {error && !loading && (
@@ -199,7 +281,7 @@ export default function YouTubeSearch({ endedTitle, notice, onPlay, onQueue, onR
           </div>
         )}
 
-        {!items && !loading && !error && recents.length === 0 && (
+        {!items && !files && !fileError && !loading && !error && recents.length === 0 && (
           <p className="picker-hint">{t.search.hint}</p>
         )}
       </div>
