@@ -161,6 +161,11 @@ export default function Room({ code, onLeave }: { code: string; onLeave(): void 
               room.actions.queueAdd(videoId, title);
               room.showToast(t.room.addedToQueue);
             }}
+            onLoadMedia={room.actions.loadMedia}
+            onQueueAddMedia={(media) => {
+              room.actions.queueAddMedia(media);
+              room.showToast(t.room.addedToQueue);
+            }}
             onRequestControl={room.actions.requestControl}
           />
         </section>

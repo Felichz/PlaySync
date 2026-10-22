@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { DriveMedia, VideoItem } from '../../shared/protocol';
 import { useI18n } from '../i18n';
-import { fetchTitle, fmtBytes, parseDriveFileId, parseVideoId } from '../lib/util';
+import { mediaSourceLabel, resolveMediaLinks } from '../lib/media';
+import { fetchTitle, fmtBytes, parseVideoId } from '../lib/util';
 import { IconDrive, IconFilm, IconLink, IconLock, IconPlay, IconPlus, IconX } from './icons';
 
 type Props = {
@@ -36,24 +37,14 @@ export default function QueuePanel({
     setErr(null);
     setBusy(true);
     try {
-      const fileId = parseDriveFileId(raw);
-      if (fileId) {
-        const r = await fetch(`/api/media/${fileId}/info`);
-        const j = (await r.json().catch(() => ({}))) as {
-          error?: string;
-          limitMb?: number;
-          name?: string;
-          size?: number;
-        };
-        if (!r.ok) {
-          if (r.status === 413 && j.limitMb) {
-            setErr(t.queue.tooLarge(j.limitMb));
-          } else {
-            setErr(t.queue.driveErrors[j.error ?? ''] ?? t.queue.driveGeneric);
-          }
+      const files = await resolveMediaLinks(raw, t, true);
+      if (files) {
+        if ('error' in files) {
+          setErr(files.error);
           return;
         }
-        onAddMedia({ fileId, name: j.name, size: j.size });
+        // Several links (a movie in parts) go into the queue in the order they were pasted.
+        files.media.forEach(onAddMedia);
         setInput('');
         return;
       }
@@ -132,14 +123,14 @@ export default function QueuePanel({
         )}
         {queue.map((item, i) => (
           <li
-            key={`${item.videoId ?? item.media?.fileId}-${i}`}
+            key={`${item.videoId ?? item.media?.fileId ?? item.media?.url}-${i}`}
             className={`queue-item ${item.videoId && item.videoId === currentVideoId ? 'current' : ''}`}
           >
             <span className="queue-index">{i + 1}</span>
             <span className="queue-thumb">
               {item.media ? (
                 <span className="file" aria-hidden="true">
-                  <IconDrive size={20} />
+                  {item.media.url ? <IconFilm size={20} /> : <IconDrive size={20} />}
                 </span>
               ) : (
                 <img src={`https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`} alt="" loading="lazy" />
@@ -149,7 +140,7 @@ export default function QueuePanel({
               <span className="queue-title">{item.media?.name ?? item.title ?? item.videoId}</span>
               <span className="queue-by">
                 {item.media
-                  ? `Drive · ${item.addedBy ?? '?'}${item.media.size ? ` · ${fmtBytes(item.media.size)}` : ''}`
+                  ? `${item.media.url ? mediaSourceLabel(item.media) : 'Drive'} · ${item.addedBy ?? '?'}${item.media.size ? ` · ${fmtBytes(item.media.size)}` : ''}`
                   : t.queue.addedBy(item.addedBy ?? '?')}
               </span>
             </div>

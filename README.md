@@ -82,8 +82,10 @@ The same loop drives a native `<video>` element for Drive files. End of video is
 
 **Google Drive files go through a streaming proxy.** `/api/media/:fileId` resolves a public Drive file to a direct download URL, replaying Drive's virus-scan confirmation form when it appears, and caches the result for 30 minutes. It forwards the browser's `Range` header, so seeking works, and re-resolves once if Google's time-limited URL has expired. A watchdog closes the connection if Google stops sending for 12 s, so the browser re-requests the range instead of hanging. Nothing is stored on the server.
 
-- Files above `MAX_MEDIA_MB` (default 500) are rejected with a clear message. The file must be shared as "Anyone with the link"; Drive may throttle heavily downloaded files (`DRIVE_QUOTA`) until the next day.
+- Files above `MAX_MEDIA_MB` (default 3000) are rejected with a clear message. The file must be shared as "Anyone with the link"; Drive may throttle heavily downloaded files (`DRIVE_QUOTA`) until the next day.
 - Unlike YouTube, these bytes do flow through the server: Google to server to each viewer. A 500 MB file watched by two people costs about 1 GB of egress, which matters on a free hosting tier.
+
+**Direct video links skip the server.** A link straight to a `.mp4`, `.webm`, `.m4v`, `.mov` or `.ogv` file (an R2 or S3 bucket, any static host) is shared as a URL, and every browser loads it from that host itself, with `Range` requests for seeking. The host has to answer those requests publicly; no CORS setup is needed to play.
 
 **YouTube search without a key.** `/api/youtube/search` reads the data embedded in YouTube's own results page and caches each query for 15 minutes. If that stops working, setting `YOUTUBE_API_KEY` makes the server fall back to the YouTube Data API v3 (100 quota units per search, 10,000 per day free).
 
@@ -131,7 +133,7 @@ Optional environment variables. For local development put them in a `.env` file 
 | --- | --- |
 | `GIPHY_API_KEY` | Enables GIFs and stickers. Free key from [developers.giphy.com](https://developers.giphy.com) (Create an App, API). |
 | `YOUTUBE_API_KEY` | YouTube Data API v3 fallback for search, only used if keyless search fails. |
-| `MAX_MEDIA_MB` | Size limit for Drive files. Default `500`. |
+| `MAX_MEDIA_MB` | Size limit for Drive files. Default `3000`. |
 | `PORT` | Server port. Default `3001`. |
 | `API_PORT` | Dev only: where Vite proxies `/ws` and `/api`. Default `3001`. |
 
@@ -146,7 +148,7 @@ npm run icons      # regenerate public/icons/*.png from the logo (uses sharp)
 
 ## Deploy
 
-Any host that runs Node and supports WebSockets works, since it is a single process. A [`render.yaml`](render.yaml) blueprint is included: a free web service with build `npm install && npm run build`, start `npm start`, health check on `/api/health`, Node 20 and `MAX_MEDIA_MB=500`. Set `GIPHY_API_KEY` (and optionally `YOUTUBE_API_KEY`) in the service's Environment settings.
+Any host that runs Node and supports WebSockets works, since it is a single process. A [`render.yaml`](render.yaml) blueprint is included: a free web service with build `npm install && npm run build`, start `npm start`, health check on `/api/health`, Node 20 and `MAX_MEDIA_MB=3000`. Set `GIPHY_API_KEY` (and optionally `YOUTUBE_API_KEY`) in the service's Environment settings.
 
 On a VPS: `npm run build && PORT=8080 npm start` behind nginx with TLS.
 

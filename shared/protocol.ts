@@ -2,7 +2,7 @@
 
 export type VideoItem = {
   videoId?: string; // YouTube source
-  media?: DriveMedia; // Drive source (mutually exclusive with videoId)
+  media?: DriveMedia; // file source: Drive or a direct link (mutually exclusive with videoId)
   title?: string;
   addedBy?: string;
 };
@@ -24,9 +24,14 @@ export type ChatMedia = {
   height?: number;
 };
 
-/** A file (e.g. Google Drive video) playing in the room instead of YouTube. */
+/**
+ * A file playing in the room instead of YouTube: a public Google Drive file (`fileId`, streamed
+ * through the server) or a direct video link (`url`, e.g. an R2 bucket) that each browser loads
+ * itself. Exactly one of the two is set.
+ */
 export type DriveMedia = {
-  fileId: string;
+  fileId?: string;
+  url?: string;
   name?: string;
   size?: number; // bytes
 };
@@ -68,7 +73,7 @@ export type RoomState = {
   room: string;
   videoId: string | null; // YouTube source
   videoTitle: string | null;
-  media: DriveMedia | null; // Drive source (takes precedence when set)
+  media: DriveMedia | null; // file source (takes precedence when set)
   isPlaying: boolean;
   position: number; // seconds
   lastUpdatedAt: number; // server clock, ms
