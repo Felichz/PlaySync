@@ -49,7 +49,7 @@ browser and installs as a PWA (including iOS Add to Home Screen).
 
 ## Evidence on Hand
 
-- Live: https://playsync-avtu.onrender.com · repo github.com/Felichz/PlaySync
+- Live: https://playsync.medanolabs.com · repo github.com/Felichz/PlaySync
 - Full working feature set (rooms, sync, chat+media, queue, PWA) — redesign must keep all of it.
 
 ## Product Principles

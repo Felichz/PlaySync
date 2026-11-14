@@ -2,7 +2,7 @@
 
 Watch YouTube or a public Google Drive video in sync with people on other devices: create a room, share a six-character code, and play, pause and seek stay aligned for everyone while you chat.
 
-**[Live demo](https://syncplay-avtu.onrender.com)** · **[Case study](https://portfolio-felix-teal.vercel.app/work/playsync/)** · **Author: [Felix Andersson](https://portfolio-felix-teal.vercel.app/)**
+**[Live demo](https://playsync.medanolabs.com)** · **[Case study](https://felix.medanolabs.com/work/playsync/)** · **Author: [Felix Andersson](https://felix.medanolabs.com/)**
 
 > The demo runs on a free Render instance that sleeps when idle, so the first load can take up to a minute.
 
