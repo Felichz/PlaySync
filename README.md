@@ -7,8 +7,8 @@ Watch YouTube or a public Google Drive video in sync with people on other device
 > The demo runs on a free Render instance that sleeps when idle, so the first load can take up to a minute.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/playsync-demo-dark.webp">
-  <img src="docs/screenshots/playsync-demo-light.webp" width="100%" alt="Recording of a PlaySync room on a desktop, as the host: Big Buck Bunny playing with custom controls, the room code in a ticket-shaped badge and a 'Watching together' status chip. Sofi's message arrives, the host types a reply, and Sofi's popcorn reaction floats up over the video.">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/01-room-dark.webp">
+  <img src="docs/readme/01-room-light.webp" width="100%" alt="PlaySync, screenshot in a browser window. Same video. Same second. Create a room, share a code and watch YouTube together while you chat. No accounts. Marked: 1, The room code. Share it and the other person is in. 2, Who is here, and whether the room is watching together. 3, Chat, queue and people share one panel.">
 </picture>
 
 ## What it is
@@ -17,30 +17,20 @@ PlaySync is a watch party for two or three people in different places, on any mi
 
 YouTube video never passes through the server. Each client plays the official YouTube embed directly, and the server only holds the room's state and relays small JSON messages over one WebSocket. The server owns the playback clock and every client keeps steering its own player toward it, which is where most of the work is: keeping a phone on mobile data and a desktop on Wi-Fi within a second or two of each other through buffering, background tabs, autoplay blocks and reconnects.
 
-<table>
-  <tr>
-    <td width="260" valign="top">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/playsync-mobile-dark.webp">
-        <img src="docs/screenshots/playsync-mobile-light.webp" width="260" alt="A room on a guest's phone: the video, a lock on the play button, a 'Just watching · Ask for control' pill, the same chat, and a bottom tab bar with Chat, Queue and People.">
-      </picture>
-      <br><sub>The same room on the guest's phone. Guests watch by default and can ask the host for control.</sub>
-    </td>
-    <td valign="top">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/playsync-search-dark.webp">
-        <img src="docs/screenshots/playsync-search-light.webp" width="480" alt="YouTube search inside the player: a 'What should we watch?' search box with the query 'blender open movie' and a grid of video results with thumbnails, durations, channels and view counts. The queue panel on the right is empty.">
-      </picture>
-      <br><sub>Search replaces the player when nothing is playing. No API key needed.</sub>
-      <br><br>
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/playsync-landing-dark.webp">
-        <img src="docs/screenshots/playsync-landing-light.webp" width="480" alt="Landing page with the headline 'Same video. Same second.', a name field, a 'Create a room' button, a room code field, and an illustration of a laptop in Madrid and a phone in Bogotá playing the same frame.">
-      </picture>
-      <br><sub>Landing: pick a name, create a room or join with a code.</sub>
-    </td>
-  </tr>
-</table>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/02-search-dark.webp">
+  <img src="docs/readme/02-search-light.webp" width="100%" alt="PlaySync, screenshot in a browser window. Pick the next one without leaving the room. YouTube search inside the player, with no API key. What you add goes to a queue that plays one video after another.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/03-guest-dark.webp">
+  <img src="docs/readme/03-guest-light.webp" width="100%" alt="PlaySync, screenshot on a phone. A guest, on a phone. Guests watch in sync and can ask for control. Chat, queue and people become a tab bar at the bottom.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/04-landing-dark.webp">
+  <img src="docs/readme/04-landing-light.webp" width="100%" alt="PlaySync, screenshot in a browser window. A room in one step. Type a name and create a room, or join with a code. It works in any browser and installs as an app.">
+</picture>
 
 ## Features
 
