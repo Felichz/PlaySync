@@ -2,7 +2,7 @@
 
 Watch YouTube or a public Google Drive video in sync with people on other devices: create a room, share a six-character code, and play, pause and seek stay aligned for everyone while you chat.
 
-**[Live demo](https://syncplay-avtu.onrender.com)** · **[Case study](https://felix.medanolabs.com/work/playsync/)** · **Author: [Felix Andersson](https://felix.medanolabs.com/)**
+**[Live demo](https://playsync.medanolabs.com)** · **[Case study](https://felix.medanolabs.com/work/playsync/)** · **Author: [Felix Andersson](https://felix.medanolabs.com/)**
 
 > The demo runs on a free Render instance that sleeps when idle, so the first load can take up to a minute.
 
@@ -151,6 +151,8 @@ npm run icons      # regenerate public/icons/*.png from the logo (uses sharp)
 Any host that runs Node and supports WebSockets works, since it is a single process. A [`render.yaml`](render.yaml) blueprint is included: a free web service with build `npm install && npm run build`, start `npm start`, health check on `/api/health`, Node 20 and `MAX_MEDIA_MB=3000`. Set `GIPHY_API_KEY` (and optionally `YOUTUBE_API_KEY`) in the service's Environment settings.
 
 On a VPS: `npm run build && PORT=8080 npm start` behind nginx with TLS.
+
+The public address, playsync.medanolabs.com, is a Cloudflare Worker (`edge/`) that forwards pages, the API and the `/ws` WebSocket to the server that runs the app. It carries no app code. Its server address is the `ORIGIN` secret, so no file here names it: `npx wrangler secret put ORIGIN -c edge/wrangler.jsonc`, then `npx wrangler deploy -c edge/wrangler.jsonc`.
 
 Installing the app and the service worker require HTTPS (or `localhost`); Render provides HTTPS by default. To install: Chrome on Android, menu then "Install app"; Safari on iPhone, Share then "Add to Home Screen"; Chrome or Edge on desktop, the install icon in the address bar.
 

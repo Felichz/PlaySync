@@ -1,0 +1,12 @@
+// PlaySync at playsync.medanolabs.com: a Cloudflare Worker that forwards to the server running the app.
+// Deploy from this machine: `npx wrangler deploy -c edge/wrangler.jsonc`, with CLOUDFLARE_ACCOUNT_ID set to
+// the account that holds the medanolabs.com zone. The server's address is the ORIGIN secret (see index.js).
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "playsync",
+  "main": "index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "playsync.medanolabs.com", "custom_domain": true }]
+}
