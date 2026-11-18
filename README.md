@@ -1,6 +1,6 @@
 # PlaySync
 
-Watch YouTube or a public Google Drive video in sync with people on other devices: create a room, share a six-character code, and play, pause and seek stay aligned for everyone while you chat.
+Watch YouTube or a public Google Drive video in sync with people on other devices. Create a room, share a six-character code, and play, pause and seek stay aligned for everyone while you chat.
 
 **[Live demo](https://playsync.medanolabs.com)** · **[Case study](https://felix.medanolabs.com/work/playsync/)** · **Author: [Felix Andersson](https://felix.medanolabs.com/)**
 
@@ -13,9 +13,9 @@ Watch YouTube or a public Google Drive video in sync with people on other device
 
 ## What it is
 
-PlaySync is a watch party for two or three people in different places, on any mix of phones and computers. There are no accounts and nothing to install: open the site, create a room and send the link (`#/r/CODE`). It also installs as a Progressive Web App on Android, iOS and desktop. The interface is in English by default, with a Spanish version (an EN / ES switch on the landing page and in the room's People panel); code and docs are in English.
+A watch party for two or three people in different places, on any mix of phones and computers. No accounts and nothing to install: open the site, create a room and send the link (`#/r/CODE`). It can also be installed as a Progressive Web App on Android, iOS and desktop. The interface is in English by default, with a Spanish version (EN / ES switch on the landing page and in the room's People panel); code and docs are in English.
 
-YouTube video never passes through the server. Each client plays the official YouTube embed directly, and the server only holds the room's state and relays small JSON messages over one WebSocket. The server owns the playback clock and every client keeps steering its own player toward it, which is where most of the work is: keeping a phone on mobile data and a desktop on Wi-Fi within a second or two of each other through buffering, background tabs, autoplay blocks and reconnects.
+YouTube video never passes through the server. Each client plays the official YouTube embed directly; the server holds the room's state and relays small JSON messages over one WebSocket. The server owns the playback clock and each client steers its own player toward it. Most of the engineering is in keeping, for example, a phone on mobile data and a desktop on Wi-Fi within a second or two of each other through buffering, background tabs, autoplay blocks and reconnects.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/readme/02-search-dark.webp">
@@ -34,27 +34,27 @@ YouTube video never passes through the server. Each client plays the official Yo
 
 ## Features
 
-- **Room-wide playback**: play, pause, seek and end of video apply to everyone; the queue advances by itself.
+- **Room-wide playback**: play, pause, seek and end of video apply to everyone; the queue advances automatically.
 - **Rooms by code**: six characters from an alphabet without look-alikes (no `0/O`, `1/I/L`), shareable as a link. No sign-up.
-- **Roles**: whoever opens the room hosts it. The host grants or revokes control per person or lets everyone control; viewers can ask for control and the host gets a one-tap prompt.
+- **Roles**: whoever opens the room hosts it. The host grants or revokes control per person, or lets everyone control. Viewers can request control; the host gets a one-tap prompt.
 - **Queue** from YouTube links (`watch`, `youtu.be`, `shorts`, `live`, `embed`) and public Google Drive video files.
-- **YouTube search** inside the player for people with control: shown when nothing is playing, after the last video ends, or when a video refuses to be embedded.
+- **YouTube search** in the player for people with control: shown when nothing is playing, after the last video ends, or when a video cannot be embedded.
 - **Chat** with system notices (joins, leaves, what's playing), an emoji picker with per-user recents, and Giphy GIFs and stickers with search and recents.
-- **Floating reactions**: GIFs, stickers and emoji-only messages float over the video for everyone, fullscreen included.
-- **Screen light**: the playing YouTube video's colors glow behind the room, following the picture through YouTube's seek-preview frames, with the thumbnail as a fallback.
-- **Name prompt**: someone who opens a room link without a name is asked for one on arrival, and can skip as Guest.
-- **Custom controls** (YouTube's own chrome is hidden) and a "tap to join with sound" overlay when the browser blocks autoplay, as iOS does.
+- **Floating reactions**: GIFs, stickers and emoji-only messages float over the video for everyone, including in fullscreen.
+- **Screen light**: the colors of the playing YouTube video are projected behind the room, sampled from YouTube's seek-preview frames, with the thumbnail as a fallback.
+- **Name prompt**: someone who opens a room link without a name is asked for one, and can skip as Guest.
+- **Custom controls** (YouTube's own controls are hidden) and a "tap to join with sound" overlay when the browser blocks autoplay, as iOS does.
 - **Installable PWA** with a manifest, an auto-updating service worker and generated icons.
-- **Light and dark themes**: the system setting by default, with a switch next to the language one. In daylight the player keeps its dark frame, like a screen in a lit room.
-- **Responsive layout**: bottom tab bar on phones; video and a side panel next to each other from 940px wide, or in landscape from 520px.
+- **Light and dark themes**: follows the system setting by default, with a switch next to the language switch. The player keeps a dark frame in the light theme.
+- **Responsive layout**: bottom tab bar on phones; video and side panel side by side from 940px wide, or in landscape from 520px.
 
 ## How sync works
 
-**The server owns the clock.** For each room, `server/index.ts` stores the source (`videoId` or a Drive `media` item), `isPlaying`, `position` and `lastUpdatedAt` in its own clock. The effective position is `position + (now - lastUpdatedAt)` while playing. Every change goes through `commit()`, which first rebases `position` to the effective position, so play, pause and seek never lose time. Every `state` message carries `serverTime`, and the server re-broadcasts state every 5 s even when nobody acts. When the last person leaves, the room pauses and freezes its position, so returning resumes where it stopped.
+**The server owns the clock.** For each room, `server/index.ts` stores the source (`videoId` or a Drive `media` item), `isPlaying`, `position` and `lastUpdatedAt` in its own clock. While playing, the effective position is `position + (now - lastUpdatedAt)`. Every change goes through `commit()`, which first rebases `position` to the effective position, so play, pause and seek never lose time. Every `state` message carries `serverTime`, and the server re-broadcasts state every 5 s even when nobody acts. When the last person leaves, the room pauses and freezes its position, so it resumes where it stopped.
 
 **Each client estimates the server clock.** `src/lib/sync.ts` pings on connect and every 8 s and computes `offset = t1 - (t0 + rtt / 2)` (NTP-style). Samples with a round trip of 5 s or more are discarded, because a throttled background tab can process a pong minutes late. On a dropped connection it reconnects with exponential backoff (0.5 s doubling to 8 s, with jitter), rejoins, and receives the full state, chat and participant list in the `welcome` message.
 
-**A reconcile loop steers the local player** (`src/components/Player.tsx`). It extrapolates the target position onto the server clock and compares it with the player. It runs on every state message (throttled to once per 250 ms), every 4 s, and forced when the tab becomes visible again, at which point the client also sends a `sync-request`.
+**A reconcile loop steers the local player** (`src/components/Player.tsx`). It extrapolates the target position on the server clock and compares it with the player. It runs on every state message (throttled to once per 250 ms), every 4 s, and immediately when the tab becomes visible again, at which point the client also sends a `sync-request`.
 
 | Situation | What the client does |
 | --- | --- |
@@ -64,7 +64,7 @@ YouTube video never passes through the server. Each client plays the official Yo
 | The user just played, paused or seeked | Trust the local action for 2.5 s, until the server echoes it back |
 | Player still not started 1.4 s after a sync play | Show the "tap to join with sound" overlay (autoplay policy) |
 
-The same loop drives a native `<video>` element for Drive files. End of video is reported by clients at most once every 5 s, and the server ignores repeats within 3 s, so two clients finishing together advance the queue once.
+The same loop drives a native `<video>` element for Drive files. Clients report end of video at most once every 5 s, and the server ignores repeats within 3 s, so two clients finishing together advance the queue once.
 
 ## How it's built
 
@@ -72,14 +72,14 @@ The same loop drives a native `<video>` element for Drive files. End of video is
 
 **Google Drive files go through a streaming proxy.** `/api/media/:fileId` resolves a public Drive file to a direct download URL, replaying Drive's virus-scan confirmation form when it appears, and caches the result for 30 minutes. It forwards the browser's `Range` header, so seeking works, and re-resolves once if Google's time-limited URL has expired. A watchdog closes the connection if Google stops sending for 12 s, so the browser re-requests the range instead of hanging. Nothing is stored on the server.
 
-- Files above `MAX_MEDIA_MB` (default 3000) are rejected with a clear message. The file must be shared as "Anyone with the link"; Drive may throttle heavily downloaded files (`DRIVE_QUOTA`) until the next day.
-- Unlike YouTube, these bytes do flow through the server: Google to server to each viewer. A 500 MB file watched by two people costs about 1 GB of egress, which matters on a free hosting tier.
+- Files above `MAX_MEDIA_MB` (default 3000) are rejected with an error message. The file must be shared as "Anyone with the link"; Drive may throttle heavily downloaded files (`DRIVE_QUOTA`) until the next day.
+- Unlike YouTube, these bytes do flow through the server (Google to server to each viewer). A 500 MB file watched by two people costs about 1 GB of egress, which matters on a free hosting tier.
 
-**Direct video links skip the server.** A link straight to a `.mp4`, `.webm`, `.m4v`, `.mov` or `.ogv` file (an R2 or S3 bucket, any static host) is shared as a URL, and every browser loads it from that host itself, with `Range` requests for seeking. The host has to answer those requests publicly; no CORS setup is needed to play.
+**Direct video links skip the server.** A link to a `.mp4`, `.webm`, `.m4v`, `.mov` or `.ogv` file (an R2 or S3 bucket, any static host) is shared as a URL, and each browser loads it from that host, with `Range` requests for seeking. The host must serve those requests publicly; no CORS setup is needed to play.
 
-**YouTube search without a key.** `/api/youtube/search` reads the data embedded in YouTube's own results page and caches each query for 15 minutes. If that stops working, setting `YOUTUBE_API_KEY` makes the server fall back to the YouTube Data API v3 (100 quota units per search, 10,000 per day free).
+**YouTube search without a key.** `/api/youtube/search` reads the data embedded in YouTube's results page and caches each query for 15 minutes. If that stops working, setting `YOUTUBE_API_KEY` makes the server fall back to the YouTube Data API v3 (100 quota units per search, 10,000 per day free).
 
-**Giphy through the server.** The client calls `/api/giphy/*` on its own server, so the key never reaches the browser; search results are cached 10 minutes and trending 30. Without `GIPHY_API_KEY` everything else works and the GIF and sticker tabs show setup instructions.
+**Giphy through the server.** The client calls `/api/giphy/*` on its own server, so the key never reaches the browser; search results are cached for 10 minutes and trending for 30. Without `GIPHY_API_KEY` everything else works and the GIF and sticker tabs show setup instructions.
 
 **Hardening**
 
@@ -88,7 +88,7 @@ The same loop drives a native `<video>` element for Drive files. End of video is
 - Chat is rate-limited to 6 messages per 3 s per connection, and each room keeps its last 100 messages.
 - Chat media must be `https` on `*.giphy.com`, so the chat can't be used to embed arbitrary images.
 - The static file server rejects path traversal; hashed assets are served as immutable.
-- Dead connections are found with a WebSocket ping every 30 s; empty rooms are deleted after 2 hours.
+- Dead connections are detected with a WebSocket ping every 30 s; empty rooms are deleted after 2 hours.
 
 **Where to look**
 
@@ -138,11 +138,11 @@ npm run icons      # regenerate public/icons/*.png from the logo (uses sharp)
 
 ## Deploy
 
-Any host that runs Node and supports WebSockets works, since it is a single process. A [`render.yaml`](render.yaml) blueprint is included: a free web service with build `npm install && npm run build`, start `npm start`, health check on `/api/health`, Node 20 and `MAX_MEDIA_MB=3000`. Set `GIPHY_API_KEY` (and optionally `YOUTUBE_API_KEY`) in the service's Environment settings.
+It is a single process, so any host that runs Node and supports WebSockets works. A [`render.yaml`](render.yaml) blueprint is included: a free web service with build `npm install && npm run build`, start `npm start`, health check on `/api/health`, Node 20 and `MAX_MEDIA_MB=3000`. Set `GIPHY_API_KEY` (and optionally `YOUTUBE_API_KEY`) in the service's Environment settings.
 
 On a VPS: `npm run build && PORT=8080 npm start` behind nginx with TLS.
 
-The public address, playsync.medanolabs.com, is a Cloudflare Worker (`edge/`) that forwards pages, the API and the `/ws` WebSocket to the server that runs the app. It carries no app code. Its server address is the `ORIGIN` secret, so no file here names it: `npx wrangler secret put ORIGIN -c edge/wrangler.jsonc`, then `npx wrangler deploy -c edge/wrangler.jsonc`.
+The public address, playsync.medanolabs.com, is a Cloudflare Worker (`edge/`) that forwards pages, the API and the `/ws` WebSocket to the server running the app. It contains no app code. The server address is the `ORIGIN` secret, so it does not appear in the repo: `npx wrangler secret put ORIGIN -c edge/wrangler.jsonc`, then `npx wrangler deploy -c edge/wrangler.jsonc`.
 
 Installing the app and the service worker require HTTPS (or `localhost`); Render provides HTTPS by default. To install: Chrome on Android, menu then "Install app"; Safari on iPhone, Share then "Add to Home Screen"; Chrome or Edge on desktop, the install icon in the address bar.
 
@@ -155,7 +155,15 @@ npm start          # in one terminal
 npm run smoke      # in another
 ```
 
-It checks join and system notices, chat and GIF propagation, rejection of non-Giphy media, load, play and seek propagation, the ping/pong clock exchange, that the effective position extrapolates correctly after 1.5 s, queue add and auto-advance, the ended state, that the room's creator hosts and a joiner only watches, that a viewer's `play` is refused, that the host receives a control request, and that a granted viewer can play. It also checks that the Drive endpoint answers an invalid file id with a JSON error. `SMOKE_URL`, `SMOKE_HTTP` and `SMOKE_ROOM` point it at another server or room. It tests the protocol and server; it does not drive a real browser player.
+It checks:
+
+- join and system notices; chat and GIF propagation; rejection of non-Giphy media;
+- load, play and seek propagation; the ping/pong clock exchange; that the effective position extrapolates correctly after 1.5 s;
+- queue add and auto-advance, and the ended state;
+- roles: the room's creator hosts and a joiner only watches, a viewer's `play` is refused, the host receives a control request, and a granted viewer can play;
+- that the Drive endpoint answers an invalid file id with a JSON error.
+
+`SMOKE_URL`, `SMOKE_HTTP` and `SMOKE_ROOM` point it at another server or room. It tests the protocol and server, not a real browser player.
 
 ## Known limitations
 
